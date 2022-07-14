@@ -31,6 +31,11 @@ The samples are,
 * names
 * here
 
+```{r}
+run_tests=FALSE
+
+```
+
 
 ```{r, warning=FALSE,error=FALSE,message=FALSE}
 # must have Seurat
@@ -40,7 +45,7 @@ library(ggplot2)
 ```
 
 ### Setup the experiment folder and data info
-```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE, echo = FALSE}
+```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE, echo = FALSE, eval = !run_tests}
 # TODO
 experiment_name = "experiment_name" 
 
@@ -76,36 +81,39 @@ ids <- c("todo", "todotoo") # sample names, need to match the folders containing
 ```
 
 
-<!-- uncomment for testing -->
-<!-- ```{r exp_setup_testing, warning=FALSE,error=FALSE, message=FALSE} -->
-<!-- experiment_name = "Bonini07" -->
-<!-- # dataset_loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini05/Data/" -->
-<!-- dataset_loc <- "/Users/brianwray/Desktop/Projects/Bonini07/matrix_data" -->
-<!-- r.obj.loc <- "/Users/brianwray/Desktop/Projects/Bonini07/rds" -->
-<!-- organism = "mouse" -->
+uncomment for testing
+```{r exp_setup_testing, warning=FALSE,error=FALSE, message=FALSE, eval = run_tests}
+experiment_name = "Bonini07"
+# dataset_loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini05/Data/"
+dataset_loc <- "/Users/brianwray/Desktop/Projects/Bonini07/matrix_data"
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds_pipeline_testing/"
+organism = "mouse"
 
-<!-- if (organism == "human"){ -->
-<!--   mt.marker = "MT-" -->
-<!--   HBA.marker = "^HBA-" -->
-<!--   HBB.marker = "^HBB-" -->
-<!--   RBL.marker = "^RPL" -->
-<!--   RPS.marker = "^RPS" -->
-<!-- } else if (organism == "mouse") { -->
-<!--   mt.marker = "mt-" -->
-<!--   HBA.marker = "^Hba-" -->
-<!--   HBB.marker = "^Hbb-" -->
-<!--   RBL.marker = "^Rpl" -->
-<!--   RPS.marker = "^Rps" -->
-<!-- } else { -->
-<!--   mt.marker = "NONE" -->
-<!--   HBA.marker = "NONE" -->
-<!--   HBB.marker = "NONE-" -->
-<!--   RBL.marker = "NONE" -->
-<!--   RPS.marker = "NONE" -->
-<!-- } -->
+# Create the rds directory in case it doesn't exist
+dir.create(r.obj.loc, showWarnings = FALSE)
 
-<!-- ids <- c("IAV_CTR","IAV_DALA", "LPS_CTR", "LPS_DALA", "Saline_CTR", "Saline_DALA") -->
-<!-- ``` -->
+if (organism == "human"){
+  mt.marker = "MT-"
+  HBA.marker = "^HBA-"
+  HBB.marker = "^HBB-"
+  RBL.marker = "^RPL"
+  RPS.marker = "^RPS"
+} else if (organism == "mouse") {
+  mt.marker = "mt-"
+  HBA.marker = "^Hba-"
+  HBB.marker = "^Hbb-"
+  RBL.marker = "^Rpl"
+  RPS.marker = "^Rps"
+} else {
+  mt.marker = "NONE"
+  HBA.marker = "NONE"
+  HBB.marker = "NONE-"
+  RBL.marker = "NONE"
+  RPS.marker = "NONE"
+}
+
+ids <- c("IAV_CTR","IAV_DALA", "LPS_CTR", "LPS_DALA", "Saline_CTR", "Saline_DALA")
+```
 
 
 ## Read in the cellranger sample metrics csv files
