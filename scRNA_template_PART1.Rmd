@@ -1,6 +1,6 @@
 ---
 title: "project_name"
-author: "your_name"
+author: "Priyam Patel"
 output:
     html_document: default 
     html_notebook: default
