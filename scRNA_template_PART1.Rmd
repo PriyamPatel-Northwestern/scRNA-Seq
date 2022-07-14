@@ -13,8 +13,6 @@ Last Updated: 07/14/2022
 Small RNA-seq library preparation: miRNA library from clinical samples. Each sample contains1.5 ug (1500 ng) of isolated and purified RNA (DNASE treated).
 Two groups should exist with the label being blinded.
 
-# test test test
-
 # Part 1: Loading data from CellRanger into R
 
 Part 1 focuses on getting data into R and setting up our initial object.
@@ -27,11 +25,8 @@ Part 1 focuses on getting data into R and setting up our initial object.
 
 The samples are,
 
-* enter
-* the
-* sample
-* names
-* here
+* CTL
+* MYCi
 
 
 ```{r, warning=FALSE,error=FALSE,message=FALSE}
@@ -44,13 +39,13 @@ library(ggplot2)
 ### Setup the experiment folder and data info
 ```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE, echo = FALSE}
 # TODO
-experiment_name = "experiment_name" 
+experiment_name = "Abdulkadir08" 
 
 # This code assumes that each sample has it's own folder, with each folder containing a raw_feature_bc_matrix.h5 file
 # as well as a metrics_summary.csv file
-dataset_loc <- "path_to_h5_files" # path containing the folders containing the raw_feature_bc_matrix.h5 files
+dataset_loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Abdulkadir08/Matrix/" # path containing the folders containing the raw_feature_bc_matrix.h5 files
 
-organism = ""
+organism = "mouse"
 
 if (organism == "human"){
   mt.marker = "MT-"
@@ -72,9 +67,9 @@ if (organism == "human"){
   RPS.marker = "NONE"
 }
 
-r.obj.loc <- "r_object_path" # Output folder
+r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Abdulkadir08/rds/" # Output folder
 
-ids <- c("todo", "todotoo") # sample names, need to match the folders containing the h5 files
+ids <- c("CTL", "MYCi") # sample names, need to match the folders containing the h5 files
 ```
 
 
@@ -262,7 +257,7 @@ Objects created for:
 
 <br/>
 
-```{r load_data_hdf5, warning=FALSE,error=FALSE, message=FALSE}
+```{r load_data_hdf5, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE}
 
 d10x.data <- lapply(ids, function(i){
   print(i)
@@ -275,6 +270,15 @@ names(d10x.data) <- ids
 # str(d10x.data)
 ```
 
+```{r load_data_matrix, warning=FALSE,error=FALSE, message=FALSE}
+
+d10x.data <- sapply(ids, function(i){
+  d10x <- Read10X(file.path(dataset_loc, i,"raw_feature_bc_matrix"))
+  colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-")
+  d10x
+})
+names(d10x.data) <- ids
+```
 
 ## GEX Barcode Rank Plot
 
@@ -329,8 +333,8 @@ experiment.aggregate <- CreateSeuratObject(
   names.field = 2,
   names.delim = "\\-")
 
-# experiment.aggregate
-# str(experiment.aggregate)
+experiment.aggregate
+str(experiment.aggregate)
 ```
 
 ### The percentage of reads that map to the mitochondrial genome
@@ -365,36 +369,36 @@ The Seurat object is the center of each single cell analysis. It stores __all__ 
 slotNames(experiment.aggregate)
 ```
 
-<!-- ```{r explore3, warning=FALSE,error=FALSE, message=FALSE} -->
-<!-- head(experiment.aggregate[[]]) -->
-<!-- ``` -->
+```{r explore3, warning=FALSE,error=FALSE, message=FALSE}
+head(experiment.aggregate[[]])
+```
 
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
+<br/>
+<br/>
+<br/>
 
-<!-- ## Some basic QA/QC of the metadata, print tables of the 5% quantiles. -->
+## Some basic QA/QC of the metadata, print tables of the 5% quantiles.
 
-<!-- Show 5% quantiles for number of genes per cell per sample -->
-<!-- ```{r quantiles_1, warning=FALSE,error=FALSE,message=FALSE} -->
-<!-- kable(do.call("cbind", tapply(experiment.aggregate$nFeature_RNA,  -->
-<!--                       Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), -->
-<!--       caption = "5% Quantiles of Genes/Cell by Sample") %>% kable_styling() -->
-<!-- ``` -->
+Show 5% quantiles for number of genes per cell per sample
+```{r quantiles_1, warning=FALSE,error=FALSE,message=FALSE}
+kable(do.call("cbind", tapply(experiment.aggregate$nFeature_RNA,
+                      Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))),
+      caption = "5% Quantiles of Genes/Cell by Sample") %>% kable_styling()
+```
 
-<!-- Show 5% quantiles for number of UMI per cell per sample -->
-<!-- ```{r quantiles_2, warning=FALSE,error=FALSE,message=FALSE} -->
-<!-- kable(do.call("cbind", tapply(experiment.aggregate$nCount_RNA,  -->
-<!--                                       Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), -->
-<!--       caption = "5% Quantiles of UMI/Cell by Sample") %>% kable_styling() -->
-<!-- ``` -->
+Show 5% quantiles for number of UMI per cell per sample
+```{r quantiles_2, warning=FALSE,error=FALSE,message=FALSE}
+kable(do.call("cbind", tapply(experiment.aggregate$nCount_RNA,
+                                      Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))),
+      caption = "5% Quantiles of UMI/Cell by Sample") %>% kable_styling()
+```
 
-<!-- Show 5% quantiles for number of mitochondrial percentage per cell per sample -->
+Show 5% quantiles for number of mitochondrial percentage per cell per sample
 
-<!-- ```{r quantiles_3, warning=FALSE,error=FALSE,message=FALSE} -->
-<!-- kable(round(do.call("cbind", tapply(experiment.aggregate$percent.mito, Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), digits = 3), -->
-<!--       caption = "5% Quantiles of Percent Mitochondria by Sample") %>% kable_styling() -->
-<!-- ``` -->
+```{r quantiles_3, warning=FALSE,error=FALSE,message=FALSE}
+kable(round(do.call("cbind", tapply(experiment.aggregate$percent.mito, Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), digits = 3),
+      caption = "5% Quantiles of Percent Mitochondria by Sample") %>% kable_styling()
+```
 
 <br/>
 <br/>
@@ -402,11 +406,11 @@ slotNames(experiment.aggregate)
 ## Violin Plots
 
 Violin plot of 1) number of genes, 2) number of UMI, 3) percent mitochondrial genes, 4) percent RBC markers, and 5) percent rRNA markers
-```{r violins, warning=FALSE,error=FALSE,message=FALSE, fig.height=20}
+```{r violins, warning=FALSE,error=FALSE,message=FALSE, fig.height=4}
 VlnPlot(
   experiment.aggregate,
   features = c("nFeature_RNA", "nCount_RNA","percent.mito", "percent.rbc", "percent.ribo"),
-  ncol = 1, pt.size = 0.3)
+  ncol = 5, pt.size = 0.3)
 ```
 
 ### Plot ridgeplots of the same data
