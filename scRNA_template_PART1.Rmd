@@ -1,16 +1,17 @@
 ---
-title: "project_name"
+title: "Abdulkadir08"
 author: "Priyam Patel"
 output:
     html_document: default 
     html_notebook: default
 ---
 
-Last Updated: TODO
+Last Updated: 07/14/2022
 
 # Project Description:
 
-TODO
+Small RNA-seq library preparation: miRNA library from clinical samples. Each sample contains1.5 ug (1500 ng) of isolated and purified RNA (DNASE treated).
+Two groups should exist with the label being blinded.
 
 # test test test
 
