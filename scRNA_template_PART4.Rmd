@@ -17,30 +17,35 @@ library(kableExtra)
 library(dplyr)
 ```
 
+```{r}
+run_tests=T
+```
+
 ```{r set_fig_dims}
 knitr::opts_chunk$set(fig.width=14, fig.height=12, fig.align = "center") 
 ```
 
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE}
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval=!run_tests}
 r.obj.loc <- "r_obj_path"
 num.pcs <- 50 # Pick how many PCs you want to include by looking at the jackstraw/pca plots
+
+num.cores.available
 ```
 
+
+```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval=run_tests}
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds_pipeline_testing/"
+# load(file=paste0(r.obj.loc,"clusters_seurat_object.RData"))
+load(file=paste0(r.obj.loc,"clusters_seurat_object.RData"))
+num.pcs <- 50
+
+num.cores.available
+```
 
 ## Load the Seurat object
 ```{r load, warning=FALSE,error=FALSE,message=FALSE}
 load(file=paste0(r.obj.loc, "pca_sample_corrected.RData"))
-
 ```
-
-<!-- uncomment to test -->
-<!-- ```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE} -->
-<!-- r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds/" -->
-<!-- # load(file=paste0(r.obj.loc,"clusters_seurat_object.RData")) -->
-<!-- load(file=paste0(r.obj.loc,"clusters_seurat_object.RData")) -->
-
-<!-- num.pcs <- 50 -->
-<!-- ``` -->
 
 
 ## So how many features should we use? Use too few and your leaving out interesting variation that may define cell types, use too many and you add in noise? maybe?
@@ -48,7 +53,6 @@ load(file=paste0(r.obj.loc, "pca_sample_corrected.RData"))
 Lets choose the first 50, based on our prior part.
 
 ```{r use_pcs, warning=FALSE,error=FALSE,message=FALSE}
-# Example -> use.pcs = 1:50
 use.pcs = 1:num.pcs
 ```
 
@@ -73,6 +77,8 @@ This implementation generates clusters at a range of different resolutions. You 
 
 ```{r find_neighbors, warning=FALSE,error=FALSE,message=FALSE, eval = FALSE}
 experiment.aggregate <- FindNeighbors(experiment.aggregate, reduction="pca", dims = use.pcs)
+
+plan("multisession", plan = num.cores.available) # multithreading
 
 experiment.aggregate <- FindClusters(
     object = experiment.aggregate,
