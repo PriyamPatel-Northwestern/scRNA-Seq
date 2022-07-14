@@ -1,0 +1,446 @@
+---
+title: "project_name"
+author: "your_name"
+output:
+    html_document: default 
+    html_notebook: default
+---
+
+Last Updated: TODO
+
+# Project Description:
+
+TODO
+
+
+# Part 1: Loading data from CellRanger into R
+
+Part 1 focuses on getting data into R and setting up our initial object.
+
+## Single Cell Analysis with Seurat
+
+[Seurat](http://satijalab.org/seurat/) (now Version 4) is a popular R package that is designed for QC, analysis, and exploration of single cell data. Seurat aims to enable users to identify and interpret sources of heterogeneity from single cell transcriptomic measurements, and to integrate diverse types of single cell data. 
+
+<!-- TODO -->
+
+The samples are,
+
+* enter
+* the
+* sample
+* names
+* here
+
+
+```{r, warning=FALSE,error=FALSE,message=FALSE}
+# must have Seurat
+library(Seurat)
+library(kableExtra)
+library(ggplot2)
+```
+
+### Setup the experiment folder and data info
+```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE, echo = FALSE}
+# TODO
+experiment_name = "experiment_name" 
+
+# This code assumes that each sample has it's own folder, with each folder containing a raw_feature_bc_matrix.h5 file
+# as well as a metrics_summary.csv file
+dataset_loc <- "path_to_h5_files" # path containing the folders containing the raw_feature_bc_matrix.h5 files
+
+organism = ""
+
+if (organism == "human"){
+  mt.marker = "MT-"
+  HBA.marker = "^HBA-"
+  HBB.marker = "^HBB-"
+  RBL.marker = "^RPL"
+  RPS.marker = "^RPS"
+} else if (organism == "mouse") {
+  mt.marker = "mt-"
+  HBA.marker = "^Hba-"
+  HBB.marker = "^Hbb-"
+  RBL.marker = "^Rpl"
+  RPS.marker = "^Rps"
+} else {
+  mt.marker = "NONE"
+  HBA.marker = "NONE"
+  HBB.marker = "NONE-"
+  RBL.marker = "NONE"
+  RPS.marker = "NONE"
+}
+
+r.obj.loc <- "r_object_path" # Output folder
+
+ids <- c("todo", "todotoo") # sample names, need to match the folders containing the h5 files
+```
+
+
+<!-- uncomment for testing -->
+<!-- ```{r exp_setup_testing, warning=FALSE,error=FALSE, message=FALSE} -->
+<!-- experiment_name = "Bonini07" -->
+<!-- # dataset_loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini05/Data/" -->
+<!-- dataset_loc <- "/Users/brianwray/Desktop/Projects/Bonini07/matrix_data" -->
+<!-- r.obj.loc <- "/Users/brianwray/Desktop/Projects/Bonini07/rds" -->
+<!-- organism = "mouse" -->
+
+<!-- if (organism == "human"){ -->
+<!--   mt.marker = "MT-" -->
+<!--   HBA.marker = "^HBA-" -->
+<!--   HBB.marker = "^HBB-" -->
+<!--   RBL.marker = "^RPL" -->
+<!--   RPS.marker = "^RPS" -->
+<!-- } else if (organism == "mouse") { -->
+<!--   mt.marker = "mt-" -->
+<!--   HBA.marker = "^Hba-" -->
+<!--   HBB.marker = "^Hbb-" -->
+<!--   RBL.marker = "^Rpl" -->
+<!--   RPS.marker = "^Rps" -->
+<!-- } else { -->
+<!--   mt.marker = "NONE" -->
+<!--   HBA.marker = "NONE" -->
+<!--   HBB.marker = "NONE-" -->
+<!--   RBL.marker = "NONE" -->
+<!--   RPS.marker = "NONE" -->
+<!-- } -->
+
+<!-- ids <- c("IAV_CTR","IAV_DALA", "LPS_CTR", "LPS_DALA", "Saline_CTR", "Saline_DALA") -->
+<!-- ``` -->
+
+
+## Read in the cellranger sample metrics csv files
+
+<br/>
+sample metrics imported:
+<br/>
+
+```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE}
+d10x.metrics <- lapply(ids, function(i){
+  print(i)
+  metrics <- read.csv(file.path(dataset_loc,i,"metrics_summary.csv"), colClasses = "character")
+})
+experiment.metrics <- do.call("rbind", d10x.metrics)
+rownames(experiment.metrics) <- ids
+
+
+# I want the formatting in the charts below to include percent symbols and commas separating thousands, but I also
+# want numeric values in order to scale the colors. So, I am setting up both character and numeric copies of the
+# metrics, one for printing and one for scaling.
+sequencing_metrics <- data.frame(experiment.metrics[,c(4:16,1,17,2,3,18,19)])
+sequencing.metrics.numeric <- as.data.frame(lapply(sequencing_metrics, gsub, pattern = ",", replacement = ""))
+sequencing.metrics.numeric <- as.data.frame(lapply(sequencing.metrics.numeric, gsub, pattern = "%", replacement = ""))
+sequencing.metrics.numeric <- as.data.frame(apply(sequencing.metrics.numeric, 2, as.numeric))
+# sequencing.metrics.numeric
+# 
+# sapply(sequencing_metrics, class)
+# chars <- sapply(sequencing_metrics, is.character)
+# sequencing_metrics[ , chars] <- as.data.frame(apply(sequencing_metrics[ , chars], 2, as.numeric))
+# sapply(sequencing.metrics.numeric, class)
+# sequencing_metrics
+
+row.names(sequencing_metrics) <- gsub("\\."," ", rownames(sequencing_metrics))
+
+sequencing.characteristics.numeric <- sequencing.metrics.numeric[,1:6]
+sequencing.characteristics <- sequencing_metrics[,1:6]
+
+mapping.characteristics.numeric <- sequencing.metrics.numeric[,7:13]
+mapping.characteristics <- sequencing_metrics[,7:13]
+
+cell.characteristics.numeric <- sequencing.metrics.numeric[,14:19]
+cell.characteristics <- sequencing_metrics[,14:19]
+```
+
+<br/>
+<br/>
+
+
+
+<br/>
+
+## Sequencing Characteristics
+```{r table_seq_characteristics, warning=FALSE,error=FALSE, message=FALSE}
+
+# scale the columns with percentages from 0:100
+# direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
+# I set sequencing saturation text to white because those numbers tend to be closer to 50%
+sequencing.characteristics %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  column_spec(2) %>%
+  column_spec(3, 
+              color = spec_color(sequencing.characteristics.numeric$Valid.Barcodes, option = "viridis", direction = -1, scale_from = c(0, 100)), 
+              background = spec_color(sequencing.characteristics.numeric$Valid.Barcodes, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(4, color = "white", background = spec_color(sequencing.characteristics.numeric$Sequencing.Saturation, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(5, color = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.Barcode, option = "viridis", scale_from = c(0, 100), direction = -1), 
+              background = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.Barcode, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(6, color = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.RNA.Read, option="viridis", scale_from = c(0, 100), direction = -1), 
+              background = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.RNA.Read, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(7, color = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.UMI, option="viridis", scale_from = c(0, 100), direction = -1), 
+              background = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.UMI, option="viridis", scale_from = c(0, 100)))
+
+# sequencing_metrics %>%
+#   kable(caption = 'Cell Ranger Results') %>%
+#   pack_rows("Sequencing Characteristics", 1, 6, label_row_css = "background-color: #666; color: #fff;") %>%
+#   pack_rows("Mapping Characteristics", 7, 13, label_row_css = "background-color: #666; color: #fff;") %>%
+#   pack_rows("Cell Characteristics", 14, 19, label_row_css = "background-color: #666; color: #fff;") %>%
+#   column_spec(1, color = spec_color(sequencing_metrics$Number.of.Reads)) %>%
+#   kable_styling("striped")
+```
+
+<br/>
+
+## Mapping Characteristics
+```{r table_map_characteristics, warning=FALSE,error=FALSE, message=FALSE}
+# scale the columns with percentages from 0:100
+# direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
+mapping.characteristics[, c(1:4)] %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  column_spec(2, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.to.Genome, option="viridis", direction = -1, scale_from = c(0, 100)), 
+              background = spec_color(mapping.characteristics.numeric$Reads.Mapped.to.Genome, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(3,
+              color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Genome, option = "viridis", direction = -1, scale_from = c(0, 100)),
+              background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Genome, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(4,
+              color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Intergenic.Regions, option = "viridis", direction = -1, scale_from = c(0, 100)),
+              background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Intergenic.Regions, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(5, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Intronic.Regions, option = "viridis", scale_from = c(0, 100), direction = -1),
+              background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Intronic.Regions, option="viridis", scale_from = c(0, 100)))
+```
+
+ </br>
+ 
+```{r table_map_characteristics_2, warning=FALSE,error=FALSE, message=FALSE}
+
+# scale the columns with percentages from 0:100
+# direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
+mapping.characteristics[, c(5:7)] %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  column_spec(2, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Exonic.Regions, option="viridis", scale_from = c(0, 100), direction = -1),
+              background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Exonic.Regions, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(3, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Transcriptome, option="viridis", scale_from = c(0, 100), direction = -1),
+              background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Transcriptome, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(4, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Antisense.to.Gene, option="viridis", scale_from = c(0, 100), direction = -1),
+              background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Antisense.to.Gene, option="viridis", scale_from = c(0, 100)))
+
+```
+<br/>
+
+## Cell Characteristics
+```{r table_cell_characteristics, warning=FALSE,error=FALSE, message=FALSE}
+
+# scale the columns with percentages from 0:100
+# direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
+# I set sequencing saturation text to white because those numbers tend to be closer to 50%
+cell.characteristics %>%
+  kbl() %>%
+  kable_paper(full_width = T) %>%
+  column_spec(2) %>%
+  column_spec(3,
+              color = spec_color(cell.characteristics.numeric$Fraction.Reads.in.Cells, option = "viridis", direction = -1, scale_from = c(0, 100)),
+              background = spec_color(cell.characteristics.numeric$Fraction.Reads.in.Cells, option="viridis", scale_from = c(0, 100))) %>%
+  column_spec(4) %>%
+  column_spec(5) %>%
+  column_spec(6) %>%
+  column_spec(7)
+
+```
+
+## Load the Cell Ranger Matrix Data and create the base Seurat object.
+Cell Ranger provides a function `cellranger aggr` that will combine multiple samples into a single matrix file. However, when processing data in R this is unnecessary and we can quickly aggregate them in R.
+
+Seurat provides a function `Read10X` and `Read10X_h5` to read in 10X data folder. First we read in data from each individual sample folder. 
+
+Later, we initialize the Seurat object (`CreateSeuratObject`) with the raw (non-normalized data). Keep all cells with at least 200 detected genes. Also extracting sample names, calculating and adding in the metadata mitochondrial percentage of each cell. Adding in the metadata batchid and cell cycle. Finally, saving the raw Seurat object.
+
+## Load the Cell Ranger Matrix Data (hdf5 file) and create the base Seurat object.
+
+Objects created for:
+
+<br/>
+
+```{r load_data_hdf5, warning=FALSE,error=FALSE, message=FALSE}
+
+d10x.data <- lapply(ids, function(i){
+  print(i)
+  d10x <- Read10X_h5(file.path(dataset_loc,i,"raw_feature_bc_matrix.h5"))
+  colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-")
+  d10x
+})
+names(d10x.data) <- ids
+
+# str(d10x.data)
+```
+
+
+## GEX Barcode Rank Plot
+
+The GEX Barcode Rank Plot for the gene expression data enables one to assess library quality. Ideally there is a steep drop-off separating high UMI count cells from low UMI count background noise.
+
+<br/>
+
+```{r fig_barcode_umi, warning=FALSE,error=FALSE, message=FALSE, fig.width=10}
+# cr_filtered_cells <- as.numeric(gsub(",","",as.character(unlist(sequencing_metrics["Estimated.Number.of.Cells",]))))
+cr_filtered_cells <- unlist(sequencing.metrics.numeric[,"Estimated.Number.of.Cells"])
+
+plot_cellranger_cells <- function(ind){
+  xbreaks = c(1,1e1,1e2,1e3,1e4,1e5,1e6)
+  xlabels = c("1","10","100","1000","10k","100K","1M")
+  ybreaks = c(1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000)
+  ylabels = c("1","2","5","10","2","5","100","2","5","1000","2","5","10k","2","5","100K","2","5","1M")
+
+  pl1 <- data.frame(index=seq.int(1,ncol(d10x.data[[ind]])), nCount_RNA = sort(Matrix:::colSums(d10x.data[[ind]])+1,decreasing=T), nFeature_RNA = sort(Matrix:::colSums(d10x.data[[ind]]>0)+1,decreasing=T)) %>% ggplot() + 
+    scale_color_manual(values=c("grey50","red2","blue4"), labels=c("UMI_Background", "Features", "UMI_Cells"), name=NULL) +
+    ggtitle(paste("CellRanger filltered cells:",ids[ind],sep=" ")) + xlab("Barcodes") + ylab("counts (UMI or Features)") +
+    scale_x_continuous(trans = 'log2', breaks=xbreaks, labels = xlabels) +
+    scale_y_continuous(trans = 'log2', breaks=ybreaks, labels = ylabels) +
+    geom_line(aes(x=index, y=nCount_RNA, color=index<=cr_filtered_cells[ind] , group=1), size=1.75) +
+    geom_line(aes(x=index, y=nFeature_RNA, color="Features", group=1), size=1.25)
+
+  return(pl1)
+}
+
+# plot_cellranger_cells takes as an argument the index of the sample in the list of ids
+lapply(1:length(ids), function(i){
+  plot_cellranger_cells(i)
+})
+
+
+```
+
+
+### Create the Seurat object
+
+filter criteria: remove genes that do not occur in a minimum of 0 cells and remove cells that don't have a minimum of 300 features
+
+<br/>
+
+```{r create_seurat_object, warning=FALSE,error=FALSE, message=FALSE}
+experiment.data <- do.call("cbind", d10x.data)
+
+experiment.aggregate <- CreateSeuratObject(
+  experiment.data,
+  project = experiment_name,
+  min.cells = 0,
+  min.features = 300,
+  names.field = 2,
+  names.delim = "\\-")
+
+# experiment.aggregate
+# str(experiment.aggregate)
+```
+
+### The percentage of reads that map to the mitochondrial genome
+
+* Low-quality / dying cells often exhibit extensive mitochondrial contamination.
+* We calculate mitochondrial QC metrics with the PercentageFeatureSet function, which calculates the percentage of counts originating from a set of features.
+* We use the set of all genes, in mouse these genes can be identified as those that begin with 'mt', in human data they begin with MT.
+
+```{r calculate_pct_mito, warning=FALSE,error=FALSE, message=FALSE}
+experiment.aggregate$percent.mito <- PercentageFeatureSet(experiment.aggregate, pattern = mt.marker)
+summary(experiment.aggregate$percent.mito)
+```
+
+```{r calculate_rbc, warning=FALSE,error=FALSE, message=FALSE}
+experiment.aggregate$percent.rbc <- PercentageFeatureSet(experiment.aggregate, pattern = c(HBA.marker, HBB.marker))
+summary(experiment.aggregate$percent.rbc)
+```
+
+```{r calculate_pct_ribo, warning=FALSE,error=FALSE, message=FALSE}
+experiment.aggregate$percent.ribo <- PercentageFeatureSet(experiment.aggregate, pattern = c(RBL.marker, RPS.marker))
+summary(experiment.aggregate$percent.ribo)
+```
+
+<!-- ### Lets spend a little time getting to know the Seurat object. -->
+
+<br/>
+<br/>
+
+The Seurat object is the center of each single cell analysis. It stores __all__ information associated with the dataset, including data, annotations, analyses, etc. The R function slotNames can be used to view the slot names within an object.
+
+```{r explore2, warning=FALSE,error=FALSE, message=FALSE}
+slotNames(experiment.aggregate)
+```
+
+<!-- ```{r explore3, warning=FALSE,error=FALSE, message=FALSE} -->
+<!-- head(experiment.aggregate[[]]) -->
+<!-- ``` -->
+
+<!-- <br/> -->
+<!-- <br/> -->
+<!-- <br/> -->
+
+<!-- ## Some basic QA/QC of the metadata, print tables of the 5% quantiles. -->
+
+<!-- Show 5% quantiles for number of genes per cell per sample -->
+<!-- ```{r quantiles_1, warning=FALSE,error=FALSE,message=FALSE} -->
+<!-- kable(do.call("cbind", tapply(experiment.aggregate$nFeature_RNA,  -->
+<!--                       Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), -->
+<!--       caption = "5% Quantiles of Genes/Cell by Sample") %>% kable_styling() -->
+<!-- ``` -->
+
+<!-- Show 5% quantiles for number of UMI per cell per sample -->
+<!-- ```{r quantiles_2, warning=FALSE,error=FALSE,message=FALSE} -->
+<!-- kable(do.call("cbind", tapply(experiment.aggregate$nCount_RNA,  -->
+<!--                                       Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), -->
+<!--       caption = "5% Quantiles of UMI/Cell by Sample") %>% kable_styling() -->
+<!-- ``` -->
+
+<!-- Show 5% quantiles for number of mitochondrial percentage per cell per sample -->
+
+<!-- ```{r quantiles_3, warning=FALSE,error=FALSE,message=FALSE} -->
+<!-- kable(round(do.call("cbind", tapply(experiment.aggregate$percent.mito, Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), digits = 3), -->
+<!--       caption = "5% Quantiles of Percent Mitochondria by Sample") %>% kable_styling() -->
+<!-- ``` -->
+
+<br/>
+<br/>
+
+## Violin Plots
+
+Violin plot of 1) number of genes, 2) number of UMI, 3) percent mitochondrial genes, 4) percent RBC markers, and 5) percent rRNA markers
+```{r violins, warning=FALSE,error=FALSE,message=FALSE, fig.height=20}
+VlnPlot(
+  experiment.aggregate,
+  features = c("nFeature_RNA", "nCount_RNA","percent.mito", "percent.rbc", "percent.ribo"),
+  ncol = 1, pt.size = 0.3)
+```
+
+### Plot ridgeplots of the same data
+
+```{r ridgeplot_pre, warning=FALSE,error=FALSE,message=FALSE}
+RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito", "percent.rbc", "percent.ribo"), ncol = 2)
+```
+
+## Gene Plot, scatter plot of gene expression across cells (colored by sample).
+
+<br/>
+
+### Use these plots to determine the cutoffs for:
+
+* max mitochondrial percentage
+* min RNA count
+* max RNA count
+* max feature count
+
+<br/>
+
+```{r relationships, warning=FALSE,error=FALSE,message=FALSE}
+FeatureScatter(experiment.aggregate, feature1 = "nCount_RNA", feature2 = "percent.mito")
+FeatureScatter(experiment.aggregate, feature1 = "nFeature_RNA", feature2 = "percent.mito") 
+FeatureScatter( experiment.aggregate, "nCount_RNA", "nFeature_RNA", pt.size = 0.5) 
+```
+
+## Finally, save the original object and view the object.
+
+Original dataset in Seurat class, with no filtering
+```{r save, warning=FALSE,error=FALSE, message=FALSE}
+save(experiment.aggregate,file=paste0(r.obj.loc, "original_seurat_object.RData"))
+```
+
+## Session Information
+```{r sessioinfo}
+sessionInfo()
+```
+

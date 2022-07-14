@@ -1,0 +1,238 @@
+---
+title: "project_name"
+author: "your_name"
+output:
+    html_document: default
+    html_notebook: default
+---
+
+Last Updated: TODO
+
+# Part 2: Some QA/QC, filtering, normalization, and assigning variable genes
+
+## Load libraries
+```{r libraries, warning=FALSE,error=FALSE,message=FALSE}
+library(Seurat)
+library(biomaRt)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+```
+
+## Load the Seurat object from part 1
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE}
+r.obj.loc <- "r_object_path"
+organism="mouse" # Used in calculating cell cycle below
+
+mito.cutoff = 0 
+RNA.count.floor = 0
+RNA.count.ceiling = 0
+feature.count.cutoff = 0
+```
+
+```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
+load(file=paste0(r.obj.loc, "original_seurat_object.RData"))
+set.seed(12345)
+```
+
+
+<!-- uncomment for testing -->
+<!-- ```{r test_load, warning=FALSE,error=FALSE,message=FALSE} -->
+<!-- r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds/" -->
+<!-- load(file=paste0(r.obj.loc, "original_seurat_object.RData")) -->
+<!-- organism="mouse" -->
+<!-- set.seed(12345) -->
+
+<!-- mito.cutoff = 25  -->
+<!-- RNA.count.floor = 1000 -->
+<!-- RNA.count.ceiling = 60000 -->
+<!-- feature.count.cutoff = 700 -->
+<!-- ``` -->
+
+
+<br/>
+
+## Before Filtering
+
+Ridgeplots before applying filters
+
+```{r generate_ridgeplot_pre, warning=FALSE,error=FALSE,message=FALSE}
+ridgeplot.prefiltering <- RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito"), ncol = 2)
+# RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito"), ncol = 2)
+```
+
+<br/>
+
+## Proposed filtering cutoffs
+
+Gene Plot, scatter plot of gene expression across cells, (colored by sample), drawing horizontal an verticale lines at proposed filtering cutoffs.
+
+```{r relationships, warning=FALSE,error=FALSE,message=FALSE}
+# Set these cutoffs here and use them in the plots AND in the filtering
+
+FeatureScatter(experiment.aggregate, feature1 = "nCount_RNA", feature2 = "percent.mito") + geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + geom_hline(yintercept = mito.cutoff)
+
+FeatureScatter(experiment.aggregate, feature1 = "nFeature_RNA", feature2 = "percent.mito") + geom_vline(xintercept = feature.count.cutoff) + geom_hline(yintercept = mito.cutoff)
+
+FeatureScatter(
+  experiment.aggregate, "nCount_RNA", "nFeature_RNA",
+  pt.size = 0.5)  + geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + geom_hline(yintercept = feature.count.cutoff)
+
+```
+
+## Cell filtering stats
+
+We use the cutoffs above to filter out cells. 
+
+```{r apply_filtering, warning=FALSE,error=FALSE,message=FALSE}
+before.table <- table(experiment.aggregate$orig.ident)
+
+experiment.aggregate <- subset(experiment.aggregate, percent.mito <= mito.cutoff)
+experiment.aggregate <- subset(experiment.aggregate, nCount_RNA >= RNA.count.floor & nCount_RNA <= RNA.count.ceiling)
+experiment.aggregate <- subset(experiment.aggregate, nFeature_RNA >= feature.count.cutoff)
+
+after.table <- table(experiment.aggregate$orig.ident)
+
+combo.table <- rbind(before.table, after.table)
+
+row.names(combo.table) <- c("Num cells before filtering", "Num cells after filtering")
+combo.table %>%
+  kable(caption = "Cells present before and after filtering")%>%
+  pack_rows("Filtering results", 1, 2, label_row_css = "background-color: #666; color: #fff;") %>%
+  kable_styling("striped")
+```
+
+<br/>
+
+## Filtering comparison 
+
+Ridgeplots before filtering:
+```{r ridgeplot_pre, warning=FALSE,error=FALSE,message=FALSE}
+ridgeplot.prefiltering
+```
+
+
+Ridgeplots after filtering
+```{r ridgeplot_post, warning=FALSE,error=FALSE,message=FALSE}
+RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito"), ncol = 2)
+```
+
+<br/>
+
+## Next we want to normalize the data
+
+After filtering out cells from the dataset, the next step is to normalize the data. By default, we employ a global-scaling normalization method LogNormalize that normalizes the gene expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and then log-transforms the data.
+
+```{r normalize_help, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+?NormalizeData
+```
+
+```{r normalize, warning=FALSE,error=FALSE,message=FALSE}
+experiment.aggregate <- NormalizeData(
+  object = experiment.aggregate,
+  normalization.method = "LogNormalize",
+  scale.factor = 10000)
+```
+
+### Calculate Cell-Cycle with Seurat
+[Dissecting the multicellular ecosystem of metastatic melanoma by single-cell RNA-seq](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4944528/)
+
+The list of genes comes with Seurat (only for human). We can use biomaRt to convert the human gene symbols to mouse.
+
+
+```{r cellcycle, warning=FALSE,error=FALSE,message=FALSE}
+# Mouse Code
+convertHumanGeneList <- function(x){
+  require("biomaRt")
+  human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://dec2021.archive.ensembl.org/") 
+  mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
+
+  genes = getLDS(attributes = c("hgnc_symbol"), filters = "hgnc_symbol", values = x, mart = human, attributesL = c("mgi_symbol"), martL = mouse, uniqueRows=T)
+
+  humanx <- unique(genes[, 2])
+
+  # Print the first 6 genes found to the screen
+  print(head(humanx))
+  return(humanx)
+}
+
+if (organism == "mouse"){
+  m.s.genes <- convertHumanGeneList(cc.genes.updated.2019$s.genes)
+  m.g2m.genes <- convertHumanGeneList(cc.genes.updated.2019$g2m.genes)
+
+  # Create our Seurat object and complete the initialization steps
+  experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = m.s.genes, g2m.features = m.g2m.genes, set.ident = TRUE)
+} else if (organism == "human"){
+  # Human Code
+  s.genes <- (cc.genes$s.genes)
+  g2m.genes <- (cc.genes$g2m.genes)
+  
+  # Create our Seurat object and complete the initialization steps
+  experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
+}
+```
+
+#### Table of cell cycle (seurate)
+
+```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE}
+table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
+```
+
+#### Fixing the defualt "Ident" in Seurat
+
+```{r update_ident, warning=FALSE,error=FALSE,message=FALSE}
+table(Idents(experiment.aggregate))
+## So lets change it back to samplename
+Idents(experiment.aggregate) <- "orig.ident"
+table(Idents(experiment.aggregate))
+```
+
+
+## Identify variable genes
+
+The function FindVariableFeatures identifies the most highly variable genes (default 2000 genes) by fitting a line to the relationship of log(variance) and log(mean) using loess smoothing, uses this information to standardize the data, then calculates the variance of the standardized data.  This helps avoid selecting genes that only appear variable due to their expression level.
+
+```{r fine_variable_genes_help, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE}
+?FindVariableFeatures
+```
+
+```{r find_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval = F, echo= F}
+# experiment.aggregate <- FindVariableFeatures(
+#   object = experiment.aggregate,
+#   selection.method = "vst")
+# 
+# length(VariableFeatures(experiment.aggregate))
+# 
+# top10 <- head(VariableFeatures(experiment.aggregate), 10)
+# 
+# top10
+# 
+# vfp1 <- VariableFeaturePlot(experiment.aggregate)
+# vfp1 <- LabelPoints(plot = vfp1, points = top10, repel = TRUE)
+# vfp1
+```
+
+However, instead of using the variable genes function, lets instead assign variable genes to a set of "minimally expressed" genes.
+
+```{r our_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+dim(experiment.aggregate)
+
+min.value = 1
+min.cells = 10
+num.cells <- Matrix::rowSums(GetAssayData(experiment.aggregate, slot = "count") > min.value)
+genes.use <- names(num.cells[which(num.cells >= min.cells)])
+length(genes.use)
+
+VariableFeatures(experiment.aggregate) <- genes.use
+
+```
+
+## Finally, lets save the filtered and normalized data
+```{r save_r, warning=FALSE,error=FALSE,message=FALSE}
+save(experiment.aggregate, file=paste0(r.obj.loc, "pre_sample_corrected.RData"))
+```
+
+## Session Information
+```{r session_info, warning=FALSE,error=FALSE, message=FALSE}
+sessionInfo()
+```

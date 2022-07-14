@@ -1,0 +1,161 @@
+---
+title: "project_name"
+author: "your_name"
+output:
+    html_document: default
+    html_notebook: default
+---
+Last Updated: "date"
+
+# Part 4: clustering
+
+## Load libraries
+```{r load_libraries, warning=FALSE,error=FALSE,message=FALSE}
+library(Seurat)
+library(ggplot2)
+library(kableExtra)
+library(dplyr)
+```
+
+```{r set_fig_dims}
+knitr::opts_chunk$set(fig.width=14, fig.height=12, fig.align = "center") 
+```
+
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE}
+r.obj.loc <- "r_obj_path"
+num.pcs <- 50 # Pick how many PCs you want to include by looking at the jackstraw/pca plots
+```
+
+
+## Load the Seurat object
+```{r load, warning=FALSE,error=FALSE,message=FALSE}
+load(file=paste0(r.obj.loc, "pca_sample_corrected.RData"))
+
+```
+
+<!-- uncomment to test -->
+<!-- ```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE} -->
+<!-- r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds/" -->
+<!-- # load(file=paste0(r.obj.loc,"clusters_seurat_object.RData")) -->
+<!-- load(file=paste0(r.obj.loc,"clusters_seurat_object.RData")) -->
+
+<!-- num.pcs <- 50 -->
+<!-- ``` -->
+
+
+## So how many features should we use? Use too few and your leaving out interesting variation that may define cell types, use too many and you add in noise? maybe?
+
+Lets choose the first 50, based on our prior part.
+
+```{r use_pcs, warning=FALSE,error=FALSE,message=FALSE}
+# Example -> use.pcs = 1:50
+use.pcs = 1:num.pcs
+```
+
+## Identifying clusters
+
+Seurat implements an graph-based clustering approach. Distances between the cells are calculated based on previously identified PCs. 
+
+The default method for identifying k-nearest neighbors has been changed in V4 to [annoy](https://github.com/spotify/annoy) ("Approximate Nearest Neighbors Oh Yeah!). This is an approximate nearest-neighbor approach that is widely used for high-dimensional analysis in many fields, including single-cell analysis. Extensive community benchmarking has shown that annoy substantially improves the speed and memory requirements of neighbor discovery, with negligible impact to downstream results. 
+
+
+
+Seurat prior approach was heavily inspired by recent manuscripts which applied graph-based clustering approaches to scRNAseq data. Briefly, Seurat identified clusters of cells by a shared nearest neighbor (SNN) modularity optimization based clustering algorithm. First calculate k-nearest neighbors (KNN) and construct the SNN graph. Then optimize the modularity function to determine clusters. For a full description of the algorithms, see Waltman and van Eck (2013) The European Physical Journal B. You can switch back to using the previous default setting using nn.method="rann".
+
+
+The FindClusters function implements the neighbor based clustering procedure, and contains a resolution parameter that sets the granularity of the downstream clustering, with increased values leading to a greater number of clusters. 
+
+This implementation generates clusters at a range of different resolutions. You should pick one to do the rest of this rmd sheet, but the investigators can pick a different resolution and you can switch it up easily.
+
+```{r find_neighbors_help, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+?FindNeighbors
+```
+
+```{r find_neighbors, warning=FALSE,error=FALSE,message=FALSE, eval = FALSE}
+experiment.aggregate <- FindNeighbors(experiment.aggregate, reduction="pca", dims = use.pcs)
+
+experiment.aggregate <- FindClusters(
+    object = experiment.aggregate,
+    resolution = seq(0.25,4,0.5),
+    # resolution = 0.25,
+    verbose = FALSE
+)
+```
+
+
+Seurat add the clustering information to the metadata beginning with RNA_snn_res. followed by the resolution
+
+```{r cluster_metadata, warning=FALSE,error=FALSE,message=FALSE}
+head(experiment.aggregate[[]])
+```
+
+
+Lets first investigate how many clusters each resolution produces and set it to the smallest resolutions of 0.5 (fewest clusters).
+
+```{r resolution_clust_num_table, warning=FALSE,error=FALSE,message=FALSE}
+sapply(grep("res",colnames(experiment.aggregate@meta.data),value = TRUE),
+       function(x) length(unique(experiment.aggregate@meta.data[,x]))) %>% kable(caption = "Number of clusters by resolution", col.names = "Number of clusters", jalign = "c") %>% kable_styling()
+
+```
+
+
+## tSNE and uMAP
+The 2 most popular options for dimensionality reduction graphs with single cell data are uMAP and tSNE. Brian tends to prefer the uMAP plots because they just seem to show a more clear picture of the relationships between clusters, but this script will run both and let you choose which you prefer. 
+
+[See here](https://towardsdatascience.com/tsne-vs-umap-global-structure-4d8045acba17) for a look at the mathematical differences between the two.
+
+The report that is generated downstream from this presents only the umap plots. Of course you can switch to showing the tsne plots instead but you should have a good reason to deviate from the standard. Also, I'd avoid showing both just to avoid confusion. 
+
+
+### uMAP dimensionality reduction plot.
+
+```{r create_umap, warning=FALSE,error=FALSE,message=FALSE, eval = F}
+experiment.aggregate <- RunUMAP(
+  object = experiment.aggregate,
+  reduction.use = "pca",
+  dims = use.pcs,
+  do.fast = TRUE)
+```
+
+
+### tSNE dim reduction plot.
+
+tSNE dimensionality reduction plots are then used to visualize clustering results. As input to the tSNE, you should use the same PCs as input to the clustering analysis.
+
+```{r create_tsne, warning=FALSE,error=FALSE,message=FALSE, eval = FALSE}
+experiment.aggregate <- RunTSNE(
+  object = experiment.aggregate,
+  dims = use.pcs)
+```
+
+### Here are uMAPs of the different resolutions
+```{r umap_group_plots_1, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
+DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```
+
+```{r umap_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
+DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```
+
+
+<br/>
+<br/>
+
+### And Here are tSNE plots of the different resolutions
+
+```{r tsne_group_plots_1, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
+DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "tsne", label = T)
+```
+
+```{r tsne_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
+DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "tsne", label = T)
+```
+And last lets save all the objects in our session.
+```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
+save(experiment.aggregate, file=paste0(r.obj.loc, "clusters_seurat_object.RData"))
+```
+
+## Session Information
+```{r session_info, warning=FALSE,error=FALSE,message=FALSE}
+sessionInfo()
+```
