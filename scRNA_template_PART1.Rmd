@@ -5,7 +5,6 @@ output:
     html_document: default 
     html_notebook: default
 ---
-
 Last Updated: TODO
 
 # Project Description:
@@ -84,9 +83,10 @@ ids <- c("todo", "todotoo") # sample names, need to match the folders containing
 uncomment for testing
 ```{r exp_setup_testing, warning=FALSE,error=FALSE, message=FALSE, eval = run_tests}
 experiment_name = "Bonini07"
-# dataset_loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini05/Data/"
-dataset_loc <- "/Users/brianwray/Desktop/Projects/Bonini07/matrix_data"
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds_pipeline_testing/"
+dataset_loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/Matrix"
+# dataset_loc <- "/Users/brianwray/Desktop/Projects/Bonini07/matrix_data"
+# r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds_pipeline_testing/"
+r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds"
 organism = "mouse"
 
 # Create the rds directory in case it doesn't exist
