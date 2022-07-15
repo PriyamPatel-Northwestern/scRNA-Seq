@@ -230,7 +230,7 @@ The function FindVariableFeatures identifies the most highly variable genes (def
 
 However, instead of using the variable genes function, lets instead assign variable genes to a set of "minimally expressed" genes.
 
-```{r our_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+```{r our_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval=TRUE}
 dim(experiment.aggregate)
 
 min.value = 1
