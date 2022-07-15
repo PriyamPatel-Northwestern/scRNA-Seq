@@ -45,7 +45,7 @@ library(ggplot2)
 ```
 
 ### Setup the experiment folder and data info
-```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE, echo = FALSE, eval = !run_tests}
+```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, echo = FALSE, eval = !run_tests}
 # TODO
 experiment_name = "experiment_name" 
 
