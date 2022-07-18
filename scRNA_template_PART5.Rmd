@@ -24,6 +24,9 @@ library(future)
 run_tests = F
 ```
 
+```{r}
+num.cores.available <- detectCores()
+```
 
 ## Load the Seurat object
 ```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval=!run_tests}
@@ -31,12 +34,11 @@ r.obj.loc <- "r_obj_path"
 
 # Set this to the resolution that you want to do downstream analysis on
 Idents(experiment.merged) <- "RNA_snn_res.0.25"
-num.cores.available = 1 # set to a different number to get multithreading when running findAllMarkers
 ```
 
 
 ```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval= run_tests}
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini05/iAS_Pb_project/rds/all_samples/"
+r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds/"
 Idents(experiment.aggregate) <- "RNA_snn_res.0.25"
 ```
 
@@ -106,8 +108,11 @@ Seurat can help you find markers that define clusters via differential expressio
 
 ```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
 # DefaultAssay(experiment.aggregate) <- 'RNA'
+max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
+options(future.globals.maxSize= max.size)
 
-plan("multiprocess", workers = num.cores.available) # multithreading
+print(paste0("max.size = ", max.size, ", num.cores.available = ", num.cores.available)
+plan("multisession", workers = num.cores.available) # multithreading
 
 markers_all <- FindAllMarkers(
     object = experiment.aggregate,
