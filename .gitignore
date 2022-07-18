@@ -37,3 +37,9 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# bash helper scripts
+*.sh
+
+# slurm output logs
+*.o*
