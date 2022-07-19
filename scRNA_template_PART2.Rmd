@@ -18,10 +18,15 @@ library(ggplot2)
 library(knitr)
 library(kableExtra)
 library(future)
+library(parallel)
 ```
 
 ```{r}
 run_tests = TRUE
+```
+
+```{r}
+num.cores.available <- detectCores()
 ```
 
 ## Load the Seurat object from part 1
@@ -35,13 +40,11 @@ RNA.count.ceiling = 100000
 feature.count.cutoff = 0
 rbc.cutoff <- 100
 ribo.cutoff <- 100
-
-num.cores.available <- 1
 ```
 
 
 ```{r test_load, warning=FALSE,error=FALSE,message=FALSE, eval = run_tests}
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds_pipeline_testing/"
+r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds/"
 organism="mouse"
 set.seed(12345)
 
@@ -51,8 +54,6 @@ RNA.count.ceiling = 60000
 feature.count.cutoff = 700
 rbc.cutoff <- 100
 ribo.cutoff <- 100
-
-num.cores.available <- 1
 ```
 
 ```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
@@ -142,6 +143,10 @@ After filtering out cells from the dataset, the next step is to normalize the da
 ```
 
 ```{r normalize, warning=FALSE,error=FALSE,message=FALSE}
+max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
+options(future.globals.maxSize= max.size)
+
+print(paste0("max.size = ", max.size, ", num.cores.available = ", num.cores.available)
 plan("multisession", workers = num.cores.available) # multithreading
 
 experiment.aggregate <- NormalizeData(
@@ -252,3 +257,4 @@ save(experiment.aggregate, file=paste0(r.obj.loc, "pre_sample_corrected.RData"))
 ```{r session_info, warning=FALSE,error=FALSE, message=FALSE}
 sessionInfo()
 ```
+
