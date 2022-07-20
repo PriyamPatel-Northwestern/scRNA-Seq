@@ -34,13 +34,13 @@ num.cores.available <- detectCores()
 r.obj.loc <- "r_object_path"
 organism="" # Used in calculating cell cycle below
 
-mito.cutoff = 30 
-RNA.count.floor = 1000
-RNA.count.ceiling = 25000
-feature.count.floor = 400
-feature.count.ceiling = 4000
-rbc.cutoff = 0.35
-ribo.cutoff = 5
+mito.cutoff = 100
+RNA.count.floor = 0
+RNA.count.ceiling = 100000
+feature.count.floor = 0
+feature.count.ceiling = 10000
+rbc.cutoff = 100
+ribo.cutoff = 0
 ```
 
 
@@ -49,13 +49,13 @@ r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing
 organism="mouse"
 set.seed(12345)
 
-mito.cutoff = 30 
-RNA.count.floor = 1000
-RNA.count.ceiling = 25000
-feature.count.floor = 400
-feature.count.ceiling = 4000
-rbc.cutoff = 0.35
-ribo.cutoff = 5
+mito.cutoff = 100
+RNA.count.floor = 0
+RNA.count.ceiling = 100000
+feature.count.floor = 0
+feature.count.ceiling = 10000
+rbc.cutoff = 100
+ribo.cutoff = 0
 ```
 
 ```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
