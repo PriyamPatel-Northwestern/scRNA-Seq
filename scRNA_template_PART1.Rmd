@@ -41,6 +41,7 @@ run_tests=FALSE
 library(Seurat)
 library(kableExtra)
 library(ggplot2)
+library(Matrix)
 ```
 
 ### Setup the experiment folder and data info
@@ -55,23 +56,17 @@ dataset_loc <- "path_to_h5_files" # path containing the folders containing the r
 organism = ""
 
 if (organism == "human"){
-  mt.marker = "MT-"
-  HBA.marker = "^HBA-"
-  HBB.marker = "^HBB-"
-  RBL.marker = "^RPL"
-  RPS.marker = "^RPS"
+  mt.marker = "^MT-"
+  hb.marker = "^HB[^(P)]"
+  ribo.marker = "^RP[SL]"
 } else if (organism == "mouse") {
-  mt.marker = "mt-"
-  HBA.marker = "^Hba-"
-  HBB.marker = "^Hbb-"
-  RBL.marker = "^Rpl"
-  RPS.marker = "^Rps"
+  mt.marker = "^mt-"
+  hb.marker = "^Hb[^(p)]"
+  ribo.marker = "^Rp[sl]"
 } else {
   mt.marker = "NONE"
-  HBA.marker = "NONE"
-  HBB.marker = "NONE-"
-  RBL.marker = "NONE"
-  RPS.marker = "NONE"
+  hb.marker = "NONE"
+  ribo.marker = "NONE"
 }
 
 r.obj.loc <- "r_object_path" # Output folder
@@ -281,6 +276,15 @@ names(d10x.data) <- ids
 # str(d10x.data)
 ```
 
+```{r load_data_matrix, warning=FALSE,error=FALSE, message=FALSE}
+
+d10x.data <- sapply(ids, function(i){
+  d10x <- Read10X(file.path(dataset_loc, i,"raw_feature_bc_matrix"))
+  colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-")
+  d10x
+})
+names(d10x.data) <- ids
+```
 
 ## GEX Barcode Rank Plot
 
@@ -351,12 +355,12 @@ summary(experiment.aggregate$percent.mito)
 ```
 
 ```{r calculate_rbc, warning=FALSE,error=FALSE, message=FALSE}
-experiment.aggregate$percent.rbc <- PercentageFeatureSet(experiment.aggregate, pattern = c(HBA.marker, HBB.marker))
+experiment.aggregate$percent.rbc <- PercentageFeatureSet(experiment.aggregate, pattern = hb.marker)
 summary(experiment.aggregate$percent.rbc)
 ```
 
 ```{r calculate_pct_ribo, warning=FALSE,error=FALSE, message=FALSE}
-experiment.aggregate$percent.ribo <- PercentageFeatureSet(experiment.aggregate, pattern = c(RBL.marker, RPS.marker))
+experiment.aggregate$percent.ribo <- PercentageFeatureSet(experiment.aggregate, pattern = ribo.marker)
 summary(experiment.aggregate$percent.ribo)
 ```
 
@@ -430,14 +434,32 @@ RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent
 * max mitochondrial percentage
 * min RNA count
 * max RNA count
+* min feature count
 * max feature count
+* max RBC
+* min ribo
+
 
 <br/>
 
 ```{r relationships, warning=FALSE,error=FALSE,message=FALSE}
-FeatureScatter(experiment.aggregate, feature1 = "nCount_RNA", feature2 = "percent.mito")
-FeatureScatter(experiment.aggregate, feature1 = "nFeature_RNA", feature2 = "percent.mito") 
-FeatureScatter( experiment.aggregate, "nCount_RNA", "nFeature_RNA", pt.size = 0.5) 
+FeatureScatter(experiment.aggregate, "nCount_RNA", "percent.mito")
+FeatureScatter(experiment.aggregate, "nFeature_RNA", "percent.mito") 
+FeatureScatter( experiment.aggregate, "nCount_RNA", "nFeature_RNA")
+FeatureScatter( experiment.aggregate, "percent.ribo", "percent.rbc")
+FeatureScatter( experiment.aggregate, "percent.ribo", "percent.mito")
+FeatureScatter( experiment.aggregate, "percent.mito", "percent.rbc")
+FeatureScatter( experiment.aggregate, "nFeature_RNA", "percent.rbc")
+```
+
+## Relative expression of each gene per cell
+```{r relative expression, warning=FALSE,error=FALSE,message=FALSE}
+par(mar = c(4, 8, 2, 1))
+C <- experiment.aggregate@assays$RNA@counts
+C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
+most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
+boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
+    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 ```
 
 ## Finally, save the original object and view the object.
