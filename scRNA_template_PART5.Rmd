@@ -33,17 +33,19 @@ num.cores.available <- detectCores()
 r.obj.loc <- "r_obj_path"
 
 # Set this to the resolution that you want to do downstream analysis on
-Idents(experiment.merged) <- "RNA_snn_res.0.25"
+resolution.selection <- "RNA_snn_res.0.25"
 ```
 
 
 ```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval= run_tests}
 r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds/"
-Idents(experiment.aggregate) <- "RNA_snn_res.0.25"
+resolution.selection <- "RNA_snn_res.0.25"
 ```
 
 ```{r load_rdata, warning=FALSE,error=FALSE,message=FALSE}
 load(file=paste0(r.obj.loc,"clusters_seurat_object.RData"))
+
+Idents(experiment.aggregate) <- resolution.selection
 ```
 
 ### Choosing a resolution
@@ -106,7 +108,7 @@ Seurat can help you find markers that define clusters via differential expressio
 
 ### FindAllMarkers can be used to automate the process across all genes.
 
-```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE}
 # DefaultAssay(experiment.aggregate) <- 'RNA'
 max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
 options(future.globals.maxSize= max.size)
@@ -120,6 +122,9 @@ markers_all <- FindAllMarkers(
     min.pct = 0.25,
     thresh.use = 0.25
 )
+
+markers_all_single <- markers_all[markers_all$gene %in% names(table(markers_all$gene))[table(markers_all$gene) == 1],]
+
 ```
 
 
@@ -166,7 +171,7 @@ DoHeatmap(
 ```
 
 And last lets save all the objects in our session.
-```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
 # We want to save everything in the environment, especially the seurat object and the list of marker genes, so use ls()
 save(list=ls(), file=paste0(r.obj.loc,"clustered_seurat_object_and_markers.RData"))
 # save(markers_all, file="clusters_seurat_markers_all.RData")
