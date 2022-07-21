@@ -34,12 +34,13 @@ num.cores.available <- detectCores()
 r.obj.loc <- "r_object_path"
 organism="" # Used in calculating cell cycle below
 
-mito.cutoff = 100 
+mito.cutoff = 100
 RNA.count.floor = 0
 RNA.count.ceiling = 100000
-feature.count.cutoff = 0
-rbc.cutoff <- 100
-ribo.cutoff <- 100
+feature.count.floor = 0
+feature.count.ceiling = 10000
+rbc.cutoff = 100
+ribo.cutoff = 0
 ```
 
 
@@ -48,12 +49,13 @@ r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing
 organism="mouse"
 set.seed(12345)
 
-mito.cutoff = 25
-RNA.count.floor = 1000
-RNA.count.ceiling = 60000
-feature.count.cutoff = 700
-rbc.cutoff <- 100
-ribo.cutoff <- 100
+mito.cutoff = 100
+RNA.count.floor = 0
+RNA.count.ceiling = 100000
+feature.count.floor = 0
+feature.count.ceiling = 10000
+rbc.cutoff = 100
+ribo.cutoff = 0
 ```
 
 ```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
@@ -82,13 +84,33 @@ Gene Plot, scatter plot of gene expression across cells, (colored by sample), dr
 ```{r relationships, warning=FALSE,error=FALSE,message=FALSE}
 # Set these cutoffs here and use them in the plots AND in the filtering
 
-FeatureScatter(experiment.aggregate, feature1 = "nCount_RNA", feature2 = "percent.mito") + geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + geom_hline(yintercept = mito.cutoff)
+FeatureScatter(experiment.aggregate, "nCount_RNA", "percent.mito") + 
+  geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + 
+  geom_hline(yintercept = mito.cutoff)
 
-FeatureScatter(experiment.aggregate, feature1 = "nFeature_RNA", feature2 = "percent.mito") + geom_vline(xintercept = feature.count.cutoff) + geom_hline(yintercept = mito.cutoff)
+FeatureScatter(experiment.aggregate, "nFeature_RNA", "percent.mito") + 
+  geom_vline(xintercept = c(feature.count.floor, feature.count.ceiling)) + 
+  geom_hline(yintercept = mito.cutoff)
 
-FeatureScatter(
-  experiment.aggregate, "nCount_RNA", "nFeature_RNA",
-  pt.size = 0.5)  + geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + geom_hline(yintercept = feature.count.cutoff)
+FeatureScatter(experiment.aggregate, "nCount_RNA", "nFeature_RNA")  + 
+  geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + 
+  geom_hline(yintercept = c(feature.count.floor, feature.count.ceiling))
+
+FeatureScatter(experiment.aggregate, "percent.ribo", "percent.rbc")+ 
+  geom_vline(xintercept = ribo.cutoff) + 
+  geom_hline(yintercept = rbc.cutoff)
+
+FeatureScatter(experiment.aggregate, "percent.ribo", "percent.mito")+ 
+  geom_vline(xintercept = ribo.cutoff) + 
+  geom_hline(yintercept = mito.cutoff)
+
+FeatureScatter(experiment.aggregate, "percent.mito", "percent.rbc")+ 
+  geom_vline(xintercept = mito.cutoff) + 
+  geom_hline(yintercept = rbc.cutoff)
+
+FeatureScatter(experiment.aggregate, "nFeature_RNA", "percent.rbc")+ 
+  geom_vline(xintercept = c(feature.count.floor, feature.count.ceiling)) + 
+  geom_hline(yintercept = rbc.cutoff)
 
 ```
 
@@ -101,9 +123,9 @@ before.table <- table(experiment.aggregate$orig.ident)
 
 experiment.aggregate <- subset(experiment.aggregate, percent.mito <= mito.cutoff)
 experiment.aggregate <- subset(experiment.aggregate, nCount_RNA >= RNA.count.floor & nCount_RNA <= RNA.count.ceiling)
-experiment.aggregate <- subset(experiment.aggregate, nFeature_RNA >= feature.count.cutoff)
+experiment.aggregate <- subset(experiment.aggregate, nFeature_RNA >= feature.count.floor & nFeature_RNA <= feature.count.ceiling)
 experiment.aggregate <- subset(experiment.aggregate, percent.rbc <= percent.rbc)
-experiment.aggregate <- subset(experiment.aggregate, percent.ribo <= percent.ribo)
+experiment.aggregate <- subset(experiment.aggregate, percent.ribo >= percent.ribo)
 
 after.table <- table(experiment.aggregate$orig.ident)
 
