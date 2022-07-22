@@ -31,7 +31,8 @@ The samples are,
 * here
 
 ```{r}
-run_tests=FALSE
+run_tests <- F
+import_h5 <- T # set to false if you want to import the matrix files
 
 ```
 
@@ -77,37 +78,33 @@ ids <- c("todo", "todotoo") # sample names, need to match the folders containing
 
 uncomment for testing
 ```{r exp_setup_testing, warning=FALSE,error=FALSE, message=FALSE, eval = run_tests}
-experiment_name = "Bonini07"
-dataset_loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/Matrix"
-# dataset_loc <- "/Users/brianwray/Desktop/Projects/Bonini07/matrix_data"
-# r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds_pipeline_testing/"
-r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds"
-organism = "mouse"
+experiment_name = "LePoole01"
+# dataset_loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/Matrix"
+# r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds"
+
+dataset_loc <- "/Users/brianwray/Desktop/Projects/LePoole01/Matrix"
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
+
+organism = "human"
 
 # Create the rds directory in case it doesn't exist
 dir.create(r.obj.loc, showWarnings = FALSE)
 
 if (organism == "human"){
-  mt.marker = "MT-"
-  HBA.marker = "^HBA-"
-  HBB.marker = "^HBB-"
-  RBL.marker = "^RPL"
-  RPS.marker = "^RPS"
+  mt.marker = "^MT-"
+  hb.marker = "^HB[^(P)]"
+  ribo.marker = "^RP[SL]"
 } else if (organism == "mouse") {
-  mt.marker = "mt-"
-  HBA.marker = "^Hba-"
-  HBB.marker = "^Hbb-"
-  RBL.marker = "^Rpl"
-  RPS.marker = "^Rps"
+  mt.marker = "^mt-"
+  hb.marker = "^Hb[^(p)]"
+  ribo.marker = "^Rp[sl]"
 } else {
   mt.marker = "NONE"
-  HBA.marker = "NONE"
-  HBB.marker = "NONE-"
-  RBL.marker = "NONE"
-  RPS.marker = "NONE"
+  hb.marker = "NONE"
+  ribo.marker = "NONE"
 }
 
-ids <- c("IAV_CTR","IAV_DALA", "LPS_CTR", "LPS_DALA", "Saline_CTR", "Saline_DALA")
+ids <- c("blood", "tumor_tissue")
 ```
 
 
@@ -166,7 +163,7 @@ cell.characteristics <- sequencing_metrics[,14:19]
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
 # I set sequencing saturation text to white because those numbers tend to be closer to 50%
-sequencing.characteristics %>%
+sequencing.char.table <- sequencing.characteristics %>%
   kbl() %>%
   kable_paper(full_width = T) %>%
   column_spec(2) %>%
@@ -181,6 +178,7 @@ sequencing.characteristics %>%
   column_spec(7, color = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.UMI, option="viridis", scale_from = c(0, 100), direction = -1), 
               background = spec_color(sequencing.characteristics.numeric$Q30.Bases.in.UMI, option="viridis", scale_from = c(0, 100)))
 
+sequencing.char.table
 # sequencing_metrics %>%
 #   kable(caption = 'Cell Ranger Results') %>%
 #   pack_rows("Sequencing Characteristics", 1, 6, label_row_css = "background-color: #666; color: #fff;") %>%
@@ -196,7 +194,7 @@ sequencing.characteristics %>%
 ```{r table_map_characteristics, warning=FALSE,error=FALSE, message=FALSE}
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
-mapping.characteristics[, c(1:4)] %>%
+mapping.char.table.1 <- mapping.characteristics[, c(1:4)] %>%
   kbl() %>%
   kable_paper(full_width = T) %>%
   column_spec(2, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.to.Genome, option="viridis", direction = -1, scale_from = c(0, 100)), 
@@ -209,6 +207,8 @@ mapping.characteristics[, c(1:4)] %>%
               background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Intergenic.Regions, option="viridis", scale_from = c(0, 100))) %>%
   column_spec(5, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Intronic.Regions, option = "viridis", scale_from = c(0, 100), direction = -1),
               background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Intronic.Regions, option="viridis", scale_from = c(0, 100)))
+
+mapping.char.table.1
 ```
 
  </br>
@@ -217,7 +217,7 @@ mapping.characteristics[, c(1:4)] %>%
 
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
-mapping.characteristics[, c(5:7)] %>%
+mapping.char.table.2 <- mapping.characteristics[, c(5:7)] %>%
   kbl() %>%
   kable_paper(full_width = T) %>%
   column_spec(2, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Confidently.to.Exonic.Regions, option="viridis", scale_from = c(0, 100), direction = -1),
@@ -227,6 +227,7 @@ mapping.characteristics[, c(5:7)] %>%
   column_spec(4, color = spec_color(mapping.characteristics.numeric$Reads.Mapped.Antisense.to.Gene, option="viridis", scale_from = c(0, 100), direction = -1),
               background = spec_color(mapping.characteristics.numeric$Reads.Mapped.Antisense.to.Gene, option="viridis", scale_from = c(0, 100)))
 
+mapping.char.table.2
 ```
 <br/>
 
@@ -236,7 +237,7 @@ mapping.characteristics[, c(5:7)] %>%
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
 # I set sequencing saturation text to white because those numbers tend to be closer to 50%
-cell.characteristics %>%
+cell.char.table <- cell.characteristics %>%
   kbl() %>%
   kable_paper(full_width = T) %>%
   column_spec(2) %>%
@@ -248,6 +249,7 @@ cell.characteristics %>%
   column_spec(6) %>%
   column_spec(7)
 
+cell.char.table
 ```
 
 ## Load the Cell Ranger Matrix Data and create the base Seurat object.
@@ -263,7 +265,7 @@ Objects created for:
 
 <br/>
 
-```{r load_data_hdf5, warning=FALSE,error=FALSE, message=FALSE}
+```{r load_data_hdf5, warning=FALSE,error=FALSE, message=FALSE, eval = import_h5, echo = import_h5}
 
 d10x.data <- lapply(ids, function(i){
   print(i)
@@ -276,7 +278,7 @@ names(d10x.data) <- ids
 # str(d10x.data)
 ```
 
-```{r load_data_matrix, warning=FALSE,error=FALSE, message=FALSE}
+```{r load_data_matrix, warning=FALSE,error=FALSE, message=FALSE, eval = !import_h5, echo = !import_h5}
 
 d10x.data <- sapply(ids, function(i){
   d10x <- Read10X(file.path(dataset_loc, i,"raw_feature_bc_matrix"))
@@ -296,6 +298,8 @@ The GEX Barcode Rank Plot for the gene expression data enables one to assess lib
 # cr_filtered_cells <- as.numeric(gsub(",","",as.character(unlist(sequencing_metrics["Estimated.Number.of.Cells",]))))
 cr_filtered_cells <- unlist(sequencing.metrics.numeric[,"Estimated.Number.of.Cells"])
 
+barcode.umi.fig.list <- list()
+
 plot_cellranger_cells <- function(ind){
   xbreaks = c(1,1e1,1e2,1e3,1e4,1e5,1e6)
   xlabels = c("1","10","100","1000","10k","100K","1M")
@@ -309,15 +313,21 @@ plot_cellranger_cells <- function(ind){
     scale_y_continuous(trans = 'log2', breaks=ybreaks, labels = ylabels) +
     geom_line(aes(x=index, y=nCount_RNA, color=index<=cr_filtered_cells[ind] , group=1), size=1.75) +
     geom_line(aes(x=index, y=nFeature_RNA, color="Features", group=1), size=1.25)
-
+  
+  # barcode.umi.fig.list[[ids[ind]]] <- pl1
+  
   return(pl1)
 }
 
+
 # plot_cellranger_cells takes as an argument the index of the sample in the list of ids
-lapply(1:length(ids), function(i){
+barcode.umi.fig.list <- lapply(1:length(ids), function(i){
   plot_cellranger_cells(i)
 })
 
+lapply(1:length(ids), function(i){
+  barcode.umi.fig.list[[i]]
+})
 
 ```
 
@@ -413,10 +423,12 @@ slotNames(experiment.aggregate)
 
 Violin plot of 1) number of genes, 2) number of UMI, 3) percent mitochondrial genes, 4) percent RBC markers, and 5) percent rRNA markers
 ```{r violins, warning=FALSE,error=FALSE,message=FALSE, fig.height=20}
-VlnPlot(
+part1.vln.plots <- VlnPlot(
   experiment.aggregate,
   features = c("nFeature_RNA", "nCount_RNA","percent.mito", "percent.rbc", "percent.ribo"),
   ncol = 1, pt.size = 0.3)
+
+part1.vln.plots
 ```
 
 ### Plot ridgeplots of the same data
@@ -452,21 +464,35 @@ FeatureScatter( experiment.aggregate, "percent.mito", "percent.rbc")
 FeatureScatter( experiment.aggregate, "nFeature_RNA", "percent.rbc")
 ```
 
+# Top 20 most highly expressed genes in this dataset
+
 ## Relative expression of each gene per cell
 ```{r relative expression, warning=FALSE,error=FALSE,message=FALSE}
 par(mar = c(4, 8, 2, 1))
 C <- experiment.aggregate@assays$RNA@counts
 C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
 most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
-boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
+relative.expression.boxplot <- boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+
+# relative.expression.boxplot
 ```
 
 ## Finally, save the original object and view the object.
 
 Original dataset in Seurat class, with no filtering
+
 ```{r save, warning=FALSE,error=FALSE, message=FALSE}
 save(experiment.aggregate,file=paste0(r.obj.loc, "original_seurat_object.RData"))
+
+save(list=c("sequencing.char.table",  
+            "mapping.char.table.1",  
+            "mapping.char.table.2",  
+            "cell.char.table", 
+            "barcode.umi.fig.list",
+            "part1.vln.plots",
+            "relative.expression.boxplot"), 
+     file=paste0(r.obj.loc, "part1_stuff_for_report.RData"))
 ```
 
 ## Session Information
