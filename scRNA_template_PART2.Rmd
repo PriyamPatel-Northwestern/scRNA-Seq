@@ -22,7 +22,7 @@ library(parallel)
 ```
 
 ```{r}
-run_tests = TRUE
+run_tests = F
 ```
 
 ```{r}
@@ -45,17 +45,18 @@ ribo.cutoff = 0
 
 
 ```{r test_load, warning=FALSE,error=FALSE,message=FALSE, eval = run_tests}
-r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds/"
-organism="mouse"
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
+organism="human"
 set.seed(12345)
 
-mito.cutoff = 100
-RNA.count.floor = 0
-RNA.count.ceiling = 100000
-feature.count.floor = 0
+mito.cutoff = 35
+RNA.count.floor = 1000
+RNA.count.ceiling = 30000
 feature.count.ceiling = 10000
-rbc.cutoff = 100
-ribo.cutoff = 0
+feature.count.floor = 700
+rbc.cutoff <- 100
+ribo.cutoff <- 100
+
 ```
 
 ```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
@@ -84,34 +85,41 @@ Gene Plot, scatter plot of gene expression across cells, (colored by sample), dr
 ```{r relationships, warning=FALSE,error=FALSE,message=FALSE}
 # Set these cutoffs here and use them in the plots AND in the filtering
 
-FeatureScatter(experiment.aggregate, "nCount_RNA", "percent.mito") + 
+nCount.mito.scatter <- FeatureScatter(experiment.aggregate, "nCount_RNA", "percent.mito") + 
   geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + 
   geom_hline(yintercept = mito.cutoff)
 
-FeatureScatter(experiment.aggregate, "nFeature_RNA", "percent.mito") + 
+nFeature.mito.scatter <- FeatureScatter(experiment.aggregate, "nFeature_RNA", "percent.mito") + 
   geom_vline(xintercept = c(feature.count.floor, feature.count.ceiling)) + 
   geom_hline(yintercept = mito.cutoff)
 
-FeatureScatter(experiment.aggregate, "nCount_RNA", "nFeature_RNA")  + 
+nCount.nFeature.scatter <- FeatureScatter(experiment.aggregate, "nCount_RNA", "nFeature_RNA")  + 
   geom_vline(xintercept = c(RNA.count.floor,RNA.count.ceiling)) + 
   geom_hline(yintercept = c(feature.count.floor, feature.count.ceiling))
 
-FeatureScatter(experiment.aggregate, "percent.ribo", "percent.rbc")+ 
+ribo.rbc.scatter <- FeatureScatter(experiment.aggregate, "percent.ribo", "percent.rbc")+ 
   geom_vline(xintercept = ribo.cutoff) + 
   geom_hline(yintercept = rbc.cutoff)
 
-FeatureScatter(experiment.aggregate, "percent.ribo", "percent.mito")+ 
+ribo.mito.scatter <- FeatureScatter(experiment.aggregate, "percent.ribo", "percent.mito")+ 
   geom_vline(xintercept = ribo.cutoff) + 
   geom_hline(yintercept = mito.cutoff)
 
-FeatureScatter(experiment.aggregate, "percent.mito", "percent.rbc")+ 
+mito.rbc.scatter <- FeatureScatter(experiment.aggregate, "percent.mito", "percent.rbc")+ 
   geom_vline(xintercept = mito.cutoff) + 
   geom_hline(yintercept = rbc.cutoff)
 
-FeatureScatter(experiment.aggregate, "nFeature_RNA", "percent.rbc")+ 
+nFeature.rbc.scatter <- FeatureScatter(experiment.aggregate, "nFeature_RNA", "percent.rbc")+ 
   geom_vline(xintercept = c(feature.count.floor, feature.count.ceiling)) + 
   geom_hline(yintercept = rbc.cutoff)
 
+nCount.mito.scatter 
+nFeature.mito.scatter 
+nCount.nFeature.scatter 
+ribo.rbc.scatter 
+ribo.mito.scatter 
+mito.rbc.scatter 
+nFeature.rbc.scatter 
 ```
 
 ## Cell filtering stats
@@ -124,18 +132,22 @@ before.table <- table(experiment.aggregate$orig.ident)
 experiment.aggregate <- subset(experiment.aggregate, percent.mito <= mito.cutoff)
 experiment.aggregate <- subset(experiment.aggregate, nCount_RNA >= RNA.count.floor & nCount_RNA <= RNA.count.ceiling)
 experiment.aggregate <- subset(experiment.aggregate, nFeature_RNA >= feature.count.floor & nFeature_RNA <= feature.count.ceiling)
-experiment.aggregate <- subset(experiment.aggregate, percent.rbc <= percent.rbc)
-experiment.aggregate <- subset(experiment.aggregate, percent.ribo >= percent.ribo)
+experiment.aggregate <- subset(experiment.aggregate, percent.rbc <= rbc.cutoff)
+experiment.aggregate <- subset(experiment.aggregate, percent.ribo <= ribo.cutoff)
 
 after.table <- table(experiment.aggregate$orig.ident)
 
-combo.table <- rbind(before.table, after.table)
+combo.table <- rbind(before.table,
+                     after.table)
 
 row.names(combo.table) <- c("Num cells before filtering", "Num cells after filtering")
-combo.table %>%
+
+pretty.combo.table <- combo.table %>%
   kable(caption = "Cells present before and after filtering")%>%
   pack_rows("Filtering results", 1, 2, label_row_css = "background-color: #666; color: #fff;") %>%
   kable_styling("striped")
+
+pretty.combo.table
 ```
 
 <br/>
@@ -150,8 +162,8 @@ ridgeplot.prefiltering
 
 Ridgeplots after filtering
 ```{r ridgeplot_post, warning=FALSE,error=FALSE,message=FALSE}
-RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito", "percent.rbc", "percent.ribo"), ncol = 2)
-# RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito"), ncol = 2)
+ridgeplot.postfiltering <- RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito", "percent.rbc", "percent.ribo"), ncol = 2)
+ridgeplot.postfiltering
 ```
 
 <br/>
@@ -218,7 +230,9 @@ if (organism == "mouse"){
 #### Table of cell cycle (seurate)
 
 ```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE}
-table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
+cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
+
+cell.cycle.table
 ```
 
 #### Fixing the defualt "Ident" in Seurat
@@ -273,6 +287,29 @@ VariableFeatures(experiment.aggregate) <- genes.use
 ## Finally, lets save the filtered and normalized data
 ```{r save_r, warning=FALSE,error=FALSE,message=FALSE}
 save(experiment.aggregate, file=paste0(r.obj.loc, "pre_sample_corrected.RData"))
+
+to.save.for.report <- c("mito.cutoff", 
+                        "RNA.count.floor", 
+                        "RNA.count.ceiling", 
+                        "feature.count.floor", 
+                        "feature.count.ceiling", 
+                        "rbc.cutoff", 
+                        "ribo.cutoff",
+                        "ridgeplot.prefiltering",
+												"nCount.mito.scatter",
+												"nFeature.mito.scatter",
+												"nCount.nFeature.scatter",
+												"ribo.rbc.scatter",
+												"ribo.mito.scatter",
+												"mito.rbc.scatter",
+												"nFeature.rbc.scatter",
+												"pretty.combo.table",
+												"ridgeplot.postfiltering",
+												"ridgeplot.postfiltering",
+												"cell.cycle.table"
+                        )
+
+save(list = to.save.for.report, file=paste0(r.obj.loc, "part2_stuff_for_report.RData"))
 ```
 
 ## Session Information
