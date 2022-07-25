@@ -1,0 +1,210 @@
+---
+title: "project_name"
+author: "your_name"
+output:
+    html_document: default 
+    html_notebook: default
+---
+Last Updated: TODO
+
+# Project Description:
+
+TODO
+
+# Project Description:
+
+<!-- todo: enter the users description of the project here -->
+
+```{r load_libraries, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# must have Seurat
+library(Seurat)
+library(kableExtra)
+library(ggplot2)
+```
+
+# Analysis software used
+[Cellranger](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger) was used to align reads and generate feature-barcode matrices.
+
+[Seurat](http://satijalab.org/seurat/) (now Version 4) is a popular R package that is designed for QC, analysis, and exploration of single cell data. Seurat aims to enable users to identify and interpret sources of heterogeneity from single cell transcriptomic measurements, and to integrate diverse types of single cell data. Seurat was used to filter data, run pca, and generate and visualize clusters.
+
+# Sample QC
+
+
+### Sample names
+
+* sample1
+* sample2
+
+```{r exp_setup, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+r.obj.loc <- "path/to/rds/directory"
+load(paste0(r.obj.loc, "part1_stuff_for_report.RData"))
+load(paste0(r.obj.loc, "part2_stuff_for_report.RData"))
+```
+
+
+## Raw data metrics
+
+Here is a table showing the raw sequencing metrics for all samples.
+<!-- todo: fill out any observations you have about the sequencing metrics -->
+<!-- EXAMPLE ONLY: Of note, the [sequencing saturation](https://kb.10xgenomics.com/hc/en-us/articles/115005062366-What-is-sequencing-saturation-) for this experiment looks a bit low. This means that there seems to be a lot of RNA in these samples and more sequencing could possibly identify more genes being expressed. -->
+<br/>
+
+
+
+```{r sequencing_characteristics, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+
+sequencing.char.table
+```
+
+```{r mapping_characteristics_1, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+
+mapping.char.table.1
+```
+
+```{r mapping_characteristics_2, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+
+mapping.char.table.2
+```
+
+```{r cell_characteristics, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+
+cell.char.table
+```
+
+<br/>
+<br/>
+
+## Basic first filter criteria applied
+
+Remove genes that do not occur in a minimum of 0 cells and remove cells that don't have a minimum of 300 features
+
+
+## Violin Plots of raw data
+<br/>
+
+##### nFeature: This is the number of different genes being represented by the data in each cell.
+<br/>
+
+##### nCount: This is the number of Unique Molecular Identifiers (UMIs) in each cell, which represents the number of unique RNA molecules in each cell (i.e. ignoring any pcr duplicates). 
+<br/>
+
+##### percent.mito: The percent of UMIs in each cell that are mitochondrial.
+<br/>
+
+##### percent.rbc: The percent of UMIs in each cell that are red blood cell marker genes.
+<br/>
+
+##### percent.ribo: The percent of UMIs in each cell that are ribosomal.
+<br/>
+
+```{r violins, warning=FALSE,error=FALSE,message=FALSE, fig.height=22, echo=FALSE}
+part1.vln.plots
+```
+<br/>
+<br/>
+
+### Gene plots of raw data
+
+Scatter plots of gene expression across cells, colored by sample.
+Samples will be filtered by the cutoffs listed. Cutoffs are also illustrated by lines on the gene plots.
+
+```{r relationships, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# todo: fill out the filtering values below
+# Set these cutoffs here and use them in the plots AND in the filtering
+print("Cutoff values: ")
+print(paste0("Remove cells with % mito greater than ", mito.cutoff))
+print(paste0("Remove cells with more than ", feature.count.floor, " features (i.e. unique genes), and less than ", feature.count.ceiling))
+print(paste0("Remove cells with less than ", RNA.count.floor, " counts (i.e. UMIs), or with more than ", RNA.count.ceiling))
+print(paste0("Remove cells with less than ", ribo.cutoff, " percent of all counts coming from ribosomal markers."))
+print(paste0("Remove cells with greater than ", rbc.cutoff, " percent of all counts coming from red blood cell markers."))
+```
+<br/>
+<br/>
+
+### nUMIs vs mitochondrial %
+
+```{r ncount.mito.scatter, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+nCount.mito.scatter 
+```
+
+<br/>
+
+### number of genes vs mitochondrial %
+
+```{r nfeature.mito.scatter, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+nFeature.mito.scatter 
+```
+
+<br/>
+
+### nUMIs vs number of genes
+
+```{r ncount.nfeature.scatter, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+nCount.nFeature.scatter 
+```
+
+<br/>
+
+### % UMIs from ribo genes vs % UMIs from RBCs
+
+```{r ribo.rbc.scatter, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+ribo.rbc.scatter 
+```
+
+<br/>
+
+### % UMIs from ribo genes vs mitochondrial %
+
+```{r ribo.mito.scatter, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+ribo.mito.scatter 
+```
+
+<br/>
+
+### mitochondrial % vs % UMIs from RBCs
+```{r mito.rbc.scatter, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+mito.rbc.scatter 
+```
+
+<br/>
+
+### Number of genes vs % UMIs from RBCs
+
+```{r nfeature.rbc.scatter, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+nFeature.rbc.scatter 
+```
+
+<br/>
+
+#### Tables showing how many cells remain of each sample after the above filtering steps.
+<br/>
+
+```{r apply_first_filtering, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+pretty.combo.table
+```
+<br/>  
+<br/>  
+
+### Ridgeplots of raw data
+
+Ridgeplots of the same data as the violin plots above
+
+```{r ridgeplot_pre, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+ridgeplot.prefiltering
+```
+<br/>
+
+### Ridgeplots after filtering
+<br/>
+
+```{r ridgeplot_first_post, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+# RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito"), ncol = 2)
+ridgeplot.postfiltering
+```
+<br/>
+<br/>
+
+## Session Information
+```{r sessioinfo}
+sessionInfo()
+```
