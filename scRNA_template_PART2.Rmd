@@ -55,7 +55,7 @@ RNA.count.ceiling = 30000
 feature.count.ceiling = 10000
 feature.count.floor = 700
 rbc.cutoff <- 100
-ribo.cutoff <- 100
+ribo.cutoff <- 0
 
 ```
 
@@ -133,7 +133,7 @@ experiment.aggregate <- subset(experiment.aggregate, percent.mito <= mito.cutoff
 experiment.aggregate <- subset(experiment.aggregate, nCount_RNA >= RNA.count.floor & nCount_RNA <= RNA.count.ceiling)
 experiment.aggregate <- subset(experiment.aggregate, nFeature_RNA >= feature.count.floor & nFeature_RNA <= feature.count.ceiling)
 experiment.aggregate <- subset(experiment.aggregate, percent.rbc <= rbc.cutoff)
-experiment.aggregate <- subset(experiment.aggregate, percent.ribo <= ribo.cutoff)
+experiment.aggregate <- subset(experiment.aggregate, percent.ribo >= ribo.cutoff)
 
 after.table <- table(experiment.aggregate$orig.ident)
 
