@@ -15,6 +15,7 @@ library(Seurat)
 library(ggplot2)
 library(kableExtra)
 library(dplyr)
+library(future)
 library(parallel)
 ```
 
@@ -23,7 +24,9 @@ run_tests=F
 ```
 
 ```{r}
-num.cores.available <- detectCores()
+# num.cores.available <- detectCores()
+num.cores.available <- 1
+num.pcs <- 50
 ```
 
 ```{r set_fig_dims}
@@ -32,18 +35,16 @@ knitr::opts_chunk$set(fig.width=14, fig.height=12, fig.align = "center")
 
 ```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval=!run_tests}
 r.obj.loc <- "r_obj_path"
-num.pcs <- 50 # Pick how many PCs you want to include by looking at the jackstraw/pca plots
 ```
 
 
 ```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval=run_tests}
-r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds/"
-num.pcs <- 50
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
 ```
 
 ## Load the Seurat object
 ```{r load, warning=FALSE,error=FALSE,message=FALSE}
-load(file=paste0(r.obj.loc, "pca_sample_corrected.RData"))
+load(file=file.path(r.obj.loc, "pca_sample_corrected.RData"))
 ```
 
 
@@ -102,9 +103,10 @@ head(experiment.aggregate[[]])
 Lets first investigate how many clusters each resolution produces and set it to the smallest resolutions of 0.5 (fewest clusters).
 
 ```{r resolution_clust_num_table, warning=FALSE,error=FALSE,message=FALSE}
-sapply(grep("res",colnames(experiment.aggregate@meta.data),value = TRUE),
+clusters.by.resolution.table <- sapply(grep("res",colnames(experiment.aggregate@meta.data),value = TRUE),
        function(x) length(unique(experiment.aggregate@meta.data[,x]))) %>% kable(caption = "Number of clusters by resolution", col.names = "Number of clusters", jalign = "c") %>% kable_styling()
 
+clusters.by.resolution.table
 ```
 
 
@@ -139,11 +141,15 @@ experiment.aggregate <- RunTSNE(
 
 ### Here are uMAPs of the different resolutions
 ```{r umap_group_plots_1, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
-DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+umap.dimplot.1 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+
+umap.dimplot.1
 ```
 
 ```{r umap_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
-DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+umap.dimplot.2 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+
+umap.dimplot.2
 ```
 
 
@@ -162,6 +168,14 @@ DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.a
 And last lets save all the objects in our session.
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
 save(experiment.aggregate, file=paste0(r.obj.loc, "clusters_seurat_object.RData"))
+
+to.save.for.report <- c("clusters.by.resolution.table",
+                        "umap.dimplot.1",
+                        "umap.dimplot.2")
+
+save(list = to.save.for.report, file=paste0(r.obj.loc, "part4_stuff_for_report.RData"))
+
+
 ```
 
 ## Session Information
