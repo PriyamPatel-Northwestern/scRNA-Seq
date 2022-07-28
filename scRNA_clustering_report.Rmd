@@ -1,0 +1,243 @@
+---
+title: "project_name"
+author: "your name"
+date: "todays date"
+output:
+    html_document: 
+      keep_md: TRUE
+---
+```{r load_packages_and_rdata, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+library(Seurat)
+library(kableExtra)
+library(ggplot2)
+library(knitr)
+```
+
+
+```{r}
+
+run_tests = F
+
+```
+
+```{r testing_vals, warning=FALSE,error=FALSE,message=FALSE, echo=run_tests, eval = run_tests}
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
+ggplot.directory <- file.path(r.obj.loc, "ggplot")
+
+```
+
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, echo=!run_tests, eval = !run_tests}
+r.obj.loc <- "path/to/rds/directory"
+ggplot.directory <- file.path(r.obj.loc, "ggplot")
+
+load(paste0(r.obj.loc, "part3_stuff_for_report.RData"))
+load(paste0(r.obj.loc, "part4_stuff_for_report.RData"))
+load(paste0(r.obj.loc, "part5_stuff_for_report.RData"))
+# load(paste0(r.obj.loc, "clustered_seurat_object_and_markers.RData"))
+```
+
+
+```{r load_rdata, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+load(file.path(r.obj.loc, "part3_stuff_for_report.RData"))
+load(file.path(r.obj.loc, "part4_stuff_for_report.RData"))
+load(file.path(r.obj.loc, "part5_stuff_for_report.RData"))
+```
+
+<!-- note: These br html tags are used to insert blank lines in the final report.  -->
+<br/>
+
+## More processing before clustering
+See the QC html report for info on the filtering that has been applied so far.
+
+After the filtering in part 1, there are a few more steps before clustering.
+
+First the data are log normalized, and then scaled.
+
+ScaleData - Scales and centers genes in the dataset. I've regressed out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
+
+## PCA
+
+PCA is used for dimensionality reduction. The objective here is to try and isolate the most relevant features in the dataset in order to speed up the downstream analysis. We want to balance the tradeoff between keeping too much data (and adding time to the analysis) and not keeping enough data (and losing some of the signal).
+
+In order to pick the proper number of PCs to use we can look at a number of different figures, but I'll only show the elbow plot here. Seurat's ElbowPlot function plots the standard deviations of the principle components for easy identification of an elbow in the graph. This elbow often corresponds well with the significant PCs and is much faster to run.  This is the traditional approach to selecting principal components.
+
+
+```{r load_pre-pca_obj, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+elbow.plot
+```
+<br/>
+<br/>
+
+<!-- todo: replace numpcs below with the number of pcs you used, and uncomment the line below -->
+We tend to err on the side of keeping too much data and so I chose to go with 50 PCs for the downstream analysis.
+
+## Clustering results
+
+Clustering analysis allows for using different 'resolutions'. The resolution sets the ‘granularity’ of the downstream clustering, with increased values leading to a greater number of clusters.
+
+<!-- todo: fill out the range data below with the numbers you used, if you did clustering with a range of resolutions -->
+Here is a table showing the number of clusters resulting from different resolution values, ranging from 0.25 to 3.75, incremented by 0.5:
+<br/>
+```{r resolution_clust_num_table, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+clusters.by.resolution.table
+
+# sapply(grep("res",colnames(experiment.aggregate@meta.data),value = TRUE),
+#        function(x) length(unique(experiment.aggregate@meta.data[,x]))) %>% kable(caption = "Number of clusters by resolution", col.names = "Number of clusters", jalign = "c") %>% kable_styling()
+
+```
+<br/>
+<br/>
+
+<!-- todo: fill out your values below and uncomment the line below-->
+And here are the clustering results looking at the 4 lowest resolutions (0.25, 0.75, 1.25, 1.75) with UMAP reduction (NOT TSNE)
+
+<br/>
+
+```{r resolution_clust_num_plots, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 14}
+# DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+
+umap.dimplot.1
+```
+<br/>
+<br/>
+And here are the clustering results looking at the 4 highest resolutions (2.25, 2.75, 3.25, 3.75)
+
+<br/>
+
+```{r resolution_clust_num_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 14}
+# DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+
+umap.dimplot.2
+```
+<br/>
+<br/>
+<!-- todo: report the resolution you used and the reason why, then uncomment the line below -->
+A resolution of 0.25 made the most sense to me, simply by looking at the plots and trying to gauge where clusters start and end. Feel free to ask for the downstream results of other resolutions.
+
+All of the plots below are based on a resolution of 0.25
+<br/>
+<br/>
+
+### Plot UMAP coloring by the slot 'ident' (i.e. cluster number, default).
+```{r plot_umap, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# DimPlot(object = experiment.aggregate, pt.size=0.5, reduction = "umap", label = T)
+
+cluster.umap
+```
+<br/>
+<br/>
+
+### Plot UMAP coloring by the slot 'orig.ident' (sample names)
+```{r plot_orig_ident, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# DimPlot(object = experiment.aggregate, group.by="orig.ident", pt.size=0.5, reduction = "umap" )
+
+sample.umap
+```
+
+<br/>
+<br/>
+
+
+```{r cells_in_clusters_by_sample_table, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# table(Idents(experiment.aggregate),experiment.aggregate$orig.ident) %>% kable(caption = "Number of Cells in each cluster, by sample", jalign = "c") %>% kable_styling()
+
+clusters.to.sample.table
+```
+
+<br/>
+<br/>
+
+### Number of UMIs (i.e. how many unique rna molecules are in each cell):
+```{r plot_rna, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# FeaturePlot(experiment.aggregate, features = c('nCount_RNA'), pt.size=0.5)
+
+nUMI.featureplot
+```
+
+<br/>
+<br/>
+
+### Number of genes present (i.e. how many different genes are represented by the UMIs):
+```{r plot_feature, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# FeaturePlot(experiment.aggregate, features = c('nFeature_RNA'), pt.size=0.5)
+
+nGenes.featureplot
+```
+
+<br/>
+<br/>
+
+### Percent mitochondrial
+```{r plot_mito, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+# FeaturePlot(experiment.aggregate, features = c('percent.mito'), pt.size=0.5)
+
+pctmito.featureplot
+```
+<br/>
+<br/>
+
+#### Table of cell cycle 
+```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+cell.cycle.table
+# table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
+```
+<br/>
+<br/>
+
+
+### Marker genes
+
+For each cluster, which genes are differentially expressed in that 
+cluster compared to all other clusters combined?
+```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+figure.list <- list()
+
+# Note that knitr::include_graphics doesn't work in a loop. Instead, I'll make a list of lists of filenames
+figure.list <- sapply(num.clusters.list, function(cluster.num){
+
+  feat.plot.path <- file.path(ggplot.directory, paste0("featurePlot_cluster_", cluster.num, ".png"))
+  vln.plot.path <- file.path(ggplot.directory, paste0("violinPlot_cluster_", cluster.num, ".png"))
+  
+  figure.list <- append(figure.list, feat.plot.path)
+  figure.list <- append(figure.list, vln.plot.path)
+
+})
+
+knitr::include_graphics(unlist(figure.list))
+```
+<br/>
+<br/>
+
+<!-- todo: I use this code to save pdfs of the marker gene plots, as well as csv files of the marker genes. -->
+<!-- You can't just click play on the right, you'll have to copy the code and paste it into the console below. -->
+<!-- Note that in the header-part (in the curly braces) I've got an eval=false, which means that this code -->
+<!-- won't run by clicking on the knit button above. echo=false tells the md enging not to print out the -->
+<!-- code to the final md report.  -->
+```{r save_plots_and_gene_list, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE, eval=FALSE}
+
+# I use this to create pdfs of all of the above figures, one per cluster. 
+# Copy and paste this into the console below (in RStudio), don't just hit the 'play' button, it won't work properly.
+project.dir <- "/Users/brianwray/Desktop/Projects/Bonini07/"
+num.clusters <- length(unique(markers_all$cluster))
+figure.dir <- paste0(project.dir, "/figures/")
+table.dir <- paste0(project.dir, "/tables/")
+for (i in seq(0, num.clusters - 1)){
+  fig.filename <- paste0(figure.dir, "/cluster", i, "_vln_and_feature_plots_res025.pdf") # todo your own filename
+  pdf(file = fig.filename, onefile = TRUE)
+  print(vln_plots_top_genes(i))
+  dev.off()
+}
+
+for (i in seq(0, num.clusters - 1)){
+  table.filename <- paste0(table.dir, "/cluster", i, "_marker_genes_res025.csv") # todo your own filename
+  these.markers <- markers_all[markers_all$cluster == i,]
+  write.csv(x = these.markers, file = table.filename, quote = FALSE)
+  
+}
+
+```
+## Session Information
+```{r sessioinfo}
+sessionInfo()
+```
+
