@@ -14,30 +14,29 @@ Last Updated: "date"
 ```{r load_libraries, warning=FALSE,error=FALSE,message=FALSE}
 library(Seurat)
 library(ggplot2)
+library(kableExtra)
 library(future)
+library(dplyr)
 library(parallel)
 ```
 
 ```{r}
 run_tests=F
+# num.cores.available=detectCores()
+num.cores.available=1
 ```
-
-```{r}
-num.cores.available <- detectCores()
-```
-
 
 ## Load the Seurat object
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval = !run_tests}
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval = !run_tests, echo = !run_tests}
 r.obj.loc <- "r_obj_path"
 ```
 
-```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval = run_tests, echo = FALSE}
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/Bonini07/rds_pipeline_testing/"
+```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval = run_tests, echo = run_tests}
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
 ```
 
 ```{r load_rdata, warning=FALSE,error=FALSE,message=FALSE}
-load(file=paste0(r.obj.loc, "pre_sample_corrected.RData"))
+load(file=file.path(r.obj.loc, "pca_sample_corrected.RData"))
 ```
 
 
@@ -46,12 +45,7 @@ load(file=paste0(r.obj.loc, "pre_sample_corrected.RData"))
 ScaleData - Scales and centers genes in the dataset. If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered unless otherwise specified. Here we regress out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
 ```{r scale_data, warning=FALSE,error=FALSE,message=FALSE}
-max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
-options(future.globals.maxSize= max.size)
- 
-print(paste0("max.size = ", max.size, ", num.cores.available = ", num.cores.available))
 plan("multisession", workers = num.cores.available) # multithreading
-
 experiment.aggregate <- ScaleData(
   object = experiment.aggregate,
   vars.to.regress = c("S.Score", "G2M.Score", "percent.mito", "nFeature_RNA"))
@@ -73,21 +67,29 @@ Seurat then provides a number of ways to visualize the PCA results
 
 Visualize PCA loadings
 ```{r viz_pca, warning=FALSE,error=FALSE,message=FALSE}
-VizDimLoadings(experiment.aggregate, dims = 1, ncol = 1) + theme_minimal(base_size = 8)
-VizDimLoadings(experiment.aggregate, dims = 2, ncol = 1) + theme_minimal(base_size = 8)
+pca.loadings.1 <- VizDimLoadings(experiment.aggregate, dims = 1, ncol = 1) + theme_minimal(base_size = 8)
+pca.loadings.2 <- VizDimLoadings(experiment.aggregate, dims = 2, ncol = 1) + theme_minimal(base_size = 8)
+
+pca.loadings.1
+pca.loadings.2
 ```
 
 Principal components plot
 ```{r plot_pca, warning=FALSE,error=FALSE,message=FALSE}
-DimPlot(object = experiment.aggregate, reduction = "pca")
+pca.plot <- DimPlot(object = experiment.aggregate, reduction = "pca")
+
+pca.plot
 ```
 
 Draws a heatmap focusing on a principal component. Both cells and genes are sorted by their principal component scores. Allows for nice visualization of sources of heterogeneity in the dataset.
 
 ```{r heatmap_pca, warning=FALSE,error=FALSE,message=FALSE}
-DimHeatmap(object = experiment.aggregate, dims = 1:6, cells = 500, balanced = TRUE)
+pca.heatmap.1 <- DimHeatmap(object = experiment.aggregate, dims = 1:6, cells = 500, balanced = TRUE, fast = FALSE)
 
-DimHeatmap(object = experiment.aggregate, dims = 7:12, cells = 500, balanced = TRUE)
+pca.heatmap.2 <- DimHeatmap(object = experiment.aggregate, dims = 7:12, cells = 500, balanced = TRUE, fast = FALSE)
+
+pca.heatmap.1
+pca.heatmap.2
 ```
 
 ### Selecting which PCs to use
@@ -96,12 +98,29 @@ To overcome the extensive technical noise in any single gene, Seurat clusters ce
 ElbowPlot plots the standard deviations (or approximate singular values if running PCAFast) of the principle components for easy identification of an elbow in the graph. This elbow often corresponds well with the significant PCs and is much faster to run.  This is the traditional approach to selecting principal components.
 
 ```{r elbow, warning=FALSE,error=FALSE,message=FALSE}
-ElbowPlot(experiment.aggregate, ndims = 100)
+elbow.plot <- ElbowPlot(experiment.aggregate, ndims = 100)
+
+elbow.plot
 ```
 
+
+```{r cell_cycle_table, warning=FALSE, error=FALSE, message=FALSE}
+cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
+
+```
 ## Finally, lets save the filtered and normalized data
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
 save(experiment.aggregate, file=paste0(r.obj.loc,"pca_sample_corrected.RData"))
+
+to.save.for.report <- c("pca.loadings.1",
+                        "pca.loadings.2",
+                        "pca.plot",
+                        "elbow.plot",
+                        "pca.heatmap.1",
+                        "pca.heatmap.2",
+                        "cell.cycle.table")
+
+save(list = to.save.for.report, file=paste0(r.obj.loc, "part3_stuff_for_report.RData"))
 ```
 
 ## Session Information

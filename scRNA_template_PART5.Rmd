@@ -18,6 +18,8 @@ library(Seurat)
 library(ggplot2)
 library(dplyr)
 library(future)
+library(kableExtra)
+library(cowplot)
 ```
 
 ```{r}
@@ -25,25 +27,31 @@ run_tests = F
 ```
 
 ```{r}
-num.cores.available <- detectCores()
+# num.cores.available <- detectCores()
+num.cores.available <- 1
 ```
 
 ## Load the Seurat object
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval=!run_tests}
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval=!run_tests, echo = !run_tests}
 r.obj.loc <- "r_obj_path"
-
+ggplot.directory <- file.path(r.obj.loc, "ggplot")
 # Set this to the resolution that you want to do downstream analysis on
 resolution.selection <- "RNA_snn_res.0.25"
 ```
 
 
-```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval= run_tests}
-r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds/"
+```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval= run_tests, echo = run_tests}
+r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds"
+load(file=file.path(r.obj.loc,"clustered_seurat_object_and_markers.RData"))
+
+ggplot.directory <- file.path(r.obj.loc, "ggplot")
+dir.create(ggplot.directory, showWarnings = F)
+
 resolution.selection <- "RNA_snn_res.0.25"
 ```
 
-```{r load_rdata, warning=FALSE,error=FALSE,message=FALSE}
-load(file=paste0(r.obj.loc,"clusters_seurat_object.RData"))
+```{r load_rdata, warning=FALSE,error=FALSE,message=FALSE, echo = !run_tests, eval = !run_tests}
+load(file=file.path(r.obj.loc,"clusters_seurat_object.RData"))
 
 Idents(experiment.aggregate) <- resolution.selection
 ```
@@ -52,7 +60,12 @@ Idents(experiment.aggregate) <- resolution.selection
 
 Table of cluster to sample assignments.
 ```{r cells_per_res_sample, warning=FALSE,error=FALSE,message=FALSE}
-table(Idents(experiment.aggregate),experiment.aggregate$orig.ident)
+clusters.to.sample.table <- table(Idents(experiment.aggregate),experiment.aggregate$orig.ident) %>% kable(caption = "Number of Cells in each cluster, by sample", jalign = "c") %>% kable_styling()
+# table(Idents(experiment.aggregate),experiment.aggregate$orig.ident)
+# clusters.to.sample.table <- sapply(grep("res",colnames(experiment.aggregate@meta.data),value = TRUE),
+#        function(x) length(unique(experiment.aggregate@meta.data[,x]))) %>% kable(caption = "Number of clusters by resolution", col.names = "Number of clusters", jalign = "c") %>% kable_styling()
+
+clusters.to.sample.table
 ```
 
 <!-- Plot TSNE coloring by the slot 'ident' (default). -->
@@ -63,19 +76,25 @@ table(Idents(experiment.aggregate),experiment.aggregate$orig.ident)
 
 ### Plot uMap coloring by the slot 'ident' (default).
 ```{r plot_umap, warning=FALSE,error=FALSE,message=FALSE}
-DimPlot(object = experiment.aggregate, pt.size=0.5, reduction = "umap", label = T)
+cluster.umap <- DimPlot(object = experiment.aggregate, pt.size=0.5, reduction = "umap", label = T)
+
+cluster.umap
 ```
 
 ### Plot UMAP  coloring by the slot 'orig.ident' (sample names) with alpha colors turned on. A pretty picture
 ```{r pretty_pre, warning=FALSE,error=FALSE,message=FALSE}
-DimPlot(object = experiment.aggregate, group.by="orig.ident", pt.size=0.5, reduction = "umap" )
+sample.umap <- DimPlot(object = experiment.aggregate, group.by="orig.ident", pt.size=0.5, reduction = "umap" )
+
+sample.umap
 ```
 
 
 
 ### uMAP plot by cell cycle
 ```{r plot_cellcycle, warning=FALSE,error=FALSE,message=FALSE}
-DimPlot(object = experiment.aggregate, pt.size=0.5, group.by = "Phase", reduction = "umap" )
+cellcycle.umap <- DimPlot(object = experiment.aggregate, pt.size=0.5, group.by = "Phase", reduction = "umap" )
+
+cellcycle.umap
 ```
 
 
@@ -83,16 +102,22 @@ DimPlot(object = experiment.aggregate, pt.size=0.5, group.by = "Phase", reductio
 
 FeaturePlot can be used to color cells with a 'feature', non categorical data, like number of UMIs
 ```{r plot_rna, warning=FALSE,error=FALSE,message=FALSE}
-FeaturePlot(experiment.aggregate, features = c('nCount_RNA'), pt.size=0.5)
+nUMI.featureplot <- FeaturePlot(experiment.aggregate, features = c('nCount_RNA'), pt.size=0.5)
+
+nUMI.featureplot
 ```
 and number of genes present
 ```{r plot_feature, warning=FALSE,error=FALSE,message=FALSE}
-FeaturePlot(experiment.aggregate, features = c('nFeature_RNA'), pt.size=0.5)
+nGenes.featureplot <- FeaturePlot(experiment.aggregate, features = c('nFeature_RNA'), pt.size=0.5)
+
+nGenes.featureplot
 ```
 
 percent mitochondrial
 ```{r plot_mito, warning=FALSE,error=FALSE,message=FALSE}
-FeaturePlot(experiment.aggregate, features = c('percent.mito'), pt.size=0.5)
+pctmito.featureplot <- FeaturePlot(experiment.aggregate, features = c('percent.mito'), pt.size=0.5)
+
+pctmito.featureplot
 ```
 
 
@@ -108,7 +133,7 @@ Seurat can help you find markers that define clusters via differential expressio
 
 ### FindAllMarkers can be used to automate the process across all genes.
 
-```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE}
+```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE, eval = !run_tests}
 # DefaultAssay(experiment.aggregate) <- 'RNA'
 max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
 options(future.globals.maxSize= max.size)
@@ -139,15 +164,33 @@ feat_plots_top_genes <- function(cluster.num){
   print(paste0("Cluster number ", cluster.num))
   curr.markers <- markers_all[markers_all$cluster == cluster.num,] 
   # print(head(curr.markers))
-  print(FeaturePlot( 
+  
+  feat.plot.path <- file.path(ggplot.directory, paste0("featurePlot_cluster_", cluster.num, ".png"))
+  vln.plot.path <- file.path(ggplot.directory, paste0("violinPlot_cluster_", cluster.num, ".png"))
+  
+  feat.plot.list <- FeaturePlot(
     experiment.aggregate,
     curr.markers$gene[1:6],
     cols = c("lightgrey", "blue"),
-    ncol = 3 ))
+    ncol = 3) 
   
-  print(VlnPlot(object = experiment.aggregate, 
-                features = curr.markers$gene[1:6], 
-                pt.size = 0.05))
+  # feat.plot <- cowplot::plot_grid(plotlist = feat.plot.list)
+  plot.title <- ggdraw() + draw_label(paste0("Cluster ", cluster.num), fontface = 'bold')
+  print(cowplot::plot_grid(plot.title, feat.plot.list, ncol = 1, rel_heights = c(0.1, 1)))
+   
+  ggsave(feat.plot.path)
+  
+  
+  vln.plot.list <- VlnPlot(object = experiment.aggregate,
+                      features = curr.markers$gene[1:6],
+                      pt.size = 0.05)
+  
+  print(cowplot::plot_grid(plot.title, vln.plot.list, ncol = 1, rel_heights = c(0.1, 1)))
+  
+
+  ggsave(vln.plot.path)
+
+  
 }
 
 # these.markers <- markers_all[markers_all$cluster == 6,]
@@ -164,17 +207,38 @@ sapply(num.clusters.list, feat_plots_top_genes)
 Plot a heatmap of genes by cluster for the top 10 marker genes per cluster
 ```{r markers_head, warning=FALSE,error=FALSE,message=FALSE, fig.height=10}
 top10 <- markers_all_single %>% group_by(cluster) %>% top_n(10, avg_log2FC)
-DoHeatmap(
+heatmap.genes.by.cluster <- DoHeatmap(
     object = experiment.aggregate,
     features = top10$gene
 )
+    
+heatmap.genes.by.cluster   
 ```
 
 And last lets save all the objects in our session.
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
-# We want to save everything in the environment, especially the seurat object and the list of marker genes, so use ls()
-save(list=ls(), file=paste0(r.obj.loc,"clustered_seurat_object_and_markers.RData"))
-# save(markers_all, file="clusters_seurat_markers_all.RData")
+
+save.for.rdata <- c("experiment.aggregate",
+                    "markers_all",
+                    "markers_all_single",
+                    "top10",
+                    "num.clusters.list")
+
+save(list=save.for.rdata, file=paste0(r.obj.loc,"clustered_seurat_object_and_markers.RData"))
+
+to.save.for.report <- c("cellcycle.umap",
+                        "cluster.umap",
+                        "markers_all",
+                        "nGenes.featureplot",
+                        "nUMI.featureplot",
+                        "pctmito.featureplot",
+                        "sample.umap",
+                        "clusters.to.sample.table",
+                        "heatmap.genes.by.cluster",
+                        "num.clusters.list")
+
+# to.save.for.report <- c("marker.gene.plots", "num.clusters.list")
+save(list = to.save.for.report, file=paste0(r.obj.loc, "part5_stuff_for_report.RData"))
 # save(experiment.aggregate, file=paste0(r.obj.loc, "clusters_seurat_object.RData"))
 ```
 
