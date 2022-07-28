@@ -22,11 +22,12 @@ library(parallel)
 ```
 
 ```{r}
-run_tests = F
+run_tests = T
 ```
 
 ```{r}
-num.cores.available <- detectCores()
+# num.cores.available <- detectCores()
+num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
 ```
 
 ## Load the Seurat object from part 1
@@ -45,7 +46,8 @@ ribo.cutoff = 0
 
 
 ```{r test_load, warning=FALSE,error=FALSE,message=FALSE, eval = run_tests}
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
+# r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
+r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/LePoole01_10X/pipeline_testing_rds/"
 organism="human"
 set.seed(12345)
 
