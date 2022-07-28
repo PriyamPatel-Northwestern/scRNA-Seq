@@ -16,7 +16,7 @@ library(ggplot2)
 library(kableExtra)
 library(dplyr)
 library(future)
-library(parallel)
+# library(parallel) # uncomment if using detectCores()
 ```
 
 ```{r}
@@ -24,8 +24,9 @@ run_tests=F
 ```
 
 ```{r}
-# num.cores.available <- detectCores()
-num.cores.available <- 1
+num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
+# num.cores.available=detectCores()  # Multithreading on quest analytics node or personal laptop. Load parallel library first.
+# num.cores.available <- 1
 num.pcs <- 50
 ```
 
