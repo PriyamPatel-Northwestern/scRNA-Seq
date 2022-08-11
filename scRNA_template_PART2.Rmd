@@ -1,12 +1,8 @@
 ---
-title: "project_name"
-author: "your_name"
 output:
-    html_document: default
-    html_notebook: default
+  html_document:
+    pandoc_args: './common.yaml'
 ---
-
-Last Updated: TODO
 
 # Part 2: Some QA/QC, filtering, normalization, and assigning variable genes
 
@@ -19,50 +15,58 @@ library(knitr)
 library(kableExtra)
 library(future)
 library(parallel)
+library(yaml)
 ```
 
-```{r}
-run_tests = T
+```{r prepare_inline_variables, echo = FALSE}
+# get the datetime and set it to variable
+todays.date <- Sys.Date()
+formatted.date <- format(todays.date, format="%B %d %Y")
+
+config.args <- read_yaml("config.yaml")
 ```
 
-```{r}
-# num.cores.available <- detectCores()
-num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE}
+r.obj.loc <- config.args$data$`rds-file-path`
+organism <- config.args$project$organism
+
+mito.cutoff = config.args$analysis$part2$mito_cutoff
+RNA.count.floor = config.args$analysis$part2$RNA_count_floor
+RNA.count.ceiling = config.args$analysis$part2$RNA_count_ceiling
+feature.count.floor = config.args$analysis$part2$feature_count_floor
+feature.count.ceiling = config.args$analysis$part2$feature_count_ceiling
+rbc.cutoff = config.args$analysis$part2$rbc_cutoff
+ribo.cutoff = config.args$analysis$part2$ribo_cutoff
+
+run_tests <- config.args$analysis$run_tests
+node_type <- config.args$analysis$node_type
+
+part2.rds.open.file <- config.args$analysis$part2$part2_rds_open_filename
+part2.rds.open.path <- file.path(r.obj.loc, part2.rds.open.file)
+
+part2.rds.save.file <- config.args$analysis$part2$part2_rds_save_filename
+part2.rds.save.path <- file.path(r.obj.loc, part2.rds.save.file)
+
+part2.file.for.report <- config.args$analysis$part2$part2_report_stuff_filename
+part2.file.report.path <- file.path(r.obj.loc, part2.file.for.report)
+```
+
+This report was generated on `r formatted.date`
+
+```{r get_num_cores_available, echo = FALSE}
+if (node_type == "compute"){
+  # If using a compute node, then put this in the submission script:
+  # export MC_CORES=${SLURM_NTASKS}
+  num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
+} else {
+  num.cores.available <- detectCores() 
+}
 ```
 
 ## Load the Seurat object from part 1
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval = !run_tests}
-r.obj.loc <- "r_object_path"
-organism="" # Used in calculating cell cycle below
-
-mito.cutoff = 100
-RNA.count.floor = 0
-RNA.count.ceiling = 100000
-feature.count.floor = 0
-feature.count.ceiling = 10000
-rbc.cutoff = 100
-ribo.cutoff = 0
-```
-
-
-```{r test_load, warning=FALSE,error=FALSE,message=FALSE, eval = run_tests}
-# r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
-r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/LePoole01_10X/pipeline_testing_rds/"
-organism="human"
-set.seed(12345)
-
-mito.cutoff = 35
-RNA.count.floor = 1000
-RNA.count.ceiling = 30000
-feature.count.ceiling = 10000
-feature.count.floor = 700
-rbc.cutoff <- 100
-ribo.cutoff <- 0
-
-```
 
 ```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
-load(file=paste0(r.obj.loc, "original_seurat_object.RData"))
+experiment.aggregate <- readRDS(file=part2.rds.open.path)
 set.seed(12345)
 ```
 
@@ -288,7 +292,7 @@ VariableFeatures(experiment.aggregate) <- genes.use
 
 ## Finally, lets save the filtered and normalized data
 ```{r save_r, warning=FALSE,error=FALSE,message=FALSE}
-save(experiment.aggregate, file=paste0(r.obj.loc, "pre_sample_corrected.RData"))
+saveRDS(experiment.aggregate, file=part2.rds.save.path)
 
 to.save.for.report <- c("mito.cutoff", 
                         "RNA.count.floor", 
@@ -311,7 +315,7 @@ to.save.for.report <- c("mito.cutoff",
 												"cell.cycle.table"
                         )
 
-save(list = to.save.for.report, file=paste0(r.obj.loc, "part2_stuff_for_report.RData"))
+save(list = to.save.for.report, file=part2.file.report.path)
 ```
 
 ## Session Information

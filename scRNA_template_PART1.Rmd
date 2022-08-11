@@ -12,20 +12,67 @@ library(Matrix)
 library(yaml)
 ```
 
-```{r prepare_inline_variables, echo = FALSE}
-# get the datetime and set it to variable
+### Setup the experiment folder and data info, and grab args from config file
+
+```{r user_vars}
+
+# get the datetime and set it to variable for inline printing
 todays.date <- Sys.Date()
 formatted.date <- format(todays.date, format="%B %d %Y")
 
-config.params <- read_yaml("config.yaml")
-analyst.name <- config.params$project$`analyst-name`
-formatted.samples <- config.params$project$samples
+# Import the config file
+config.args <- read_yaml("config.yaml")
 
+# set project variables
+analyst.name <- config.args$project$`analyst-name`
+formatted.samples <- config.args$project$samples
+experiment.name = config.args$project$`project-name` 
+project.description <- config.args$project$`project-decription`
+dataset.path <- config.args$data$parent_directory_path
+r.obj.loc <- config.args$data$`rds-file-path` # Output folder
+
+part1.rds.save.file <- file.path(r.obj.loc, config.args$analysis$part1$part1_rds_save_filename)
+
+part1.file.for.report <-file.path(r.obj.loc, config.args$analysis$part1$part1_report_stuff_filename) 
+
+# create rds folder if it doesn't exist already
+if (!file.exists(r.obj.loc)) {
+
+ dir.create(r.obj.loc, showWarnings = FALSE, recursive = TRUE)
+
+}
+
+# setup the data location variables
+import_h5 <- config.args$data$`import-h5` # set to false if you want to import the matrix files
+
+
+organism = config.args$project$organism
+
+# setup the sample names for printing in the inline report
 formatted.samples <- gsub("\"", "", formatted.samples)
 formatted.samples <- gsub("\ ", " </br> ", formatted.samples)
 formatted.samples <- gsub("-", " * ", formatted.samples)
 
-project.description <- config.params$project$`project-decription`
+# generate list of ids for use in importing data
+ids <- config.args$project$samples # sample names, need to match the folders containing the h5 files
+ids <- gsub("-", "", ids)
+ids <- gsub("\"", "", ids)
+ids <- strsplit(ids, "[[:space:]]")
+ids <- unlist(ids)
+
+if (organism == "human"){
+  mt.marker = "^MT-"
+  hb.marker = "^HB[^(P)]"
+  ribo.marker = "^RP[SL]"
+} else if (organism == "mouse") {
+  mt.marker = "^mt-"
+  hb.marker = "^Hb[^(p)]"
+  ribo.marker = "^Rp[sl]"
+} else {
+  mt.marker = "NONE"
+  hb.marker = "NONE"
+  ribo.marker = "NONE"
+}
 ```
 
 This report was generated on `r formatted.date`
@@ -47,80 +94,6 @@ The samples are,
 
 `r formatted.samples`
 
-```{r}
-run_tests <- config.params$analysis$run_tests
-import_h5 <- config.params$data$`import-h5` # set to false if you want to import the matrix files
-
-```
-
-
-
-### Setup the experiment folder and data info
-```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, echo = FALSE, eval = !run_tests}
-experiment_name = config.params$project$`project-name` 
-
-# This code assumes that each sample has it's own folder, with each folder containing a raw_feature_bc_matrix.h5 file
-# as well as a metrics_summary.csv file
-dataset_loc <- config.params$data$`h5-file-path` # path containing the folders containing the raw_feature_bc_matrix.h5 files
-
-organism = config.params$project$organism
-
-if (organism == "human"){
-  mt.marker = "^MT-"
-  hb.marker = "^HB[^(P)]"
-  ribo.marker = "^RP[SL]"
-} else if (organism == "mouse") {
-  mt.marker = "^mt-"
-  hb.marker = "^Hb[^(p)]"
-  ribo.marker = "^Rp[sl]"
-} else {
-  mt.marker = "NONE"
-  hb.marker = "NONE"
-  ribo.marker = "NONE"
-}
-
-r.obj.loc <- config.params$data$`rds-file-path` # Output folder
-
-ids <- config.params$project$samples # sample names, need to match the folders containing the h5 files
-ids <- gsub("-", "", ids)
-ids <- gsub("\"", "", ids)
-ids <- strsplit(ids, "[[:space:]]")
-ids <- unlist(ids)
-```
-
-
-uncomment for testing
-```{r exp_setup_testing, warning=FALSE,error=FALSE, message=FALSE, eval = run_tests}
-experiment_name = "LePoole01"
-# dataset_loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/Matrix"
-# r.obj.loc <- "/projects/b1012/xvault/PROJECTS/Illumina/Bonini07/pipeline_testing_rds"
-
-dataset_loc <- "/Users/brianwray/Desktop/Projects/LePoole01/Matrix"
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
-
-organism = "human"
-
-# Create the rds directory in case it doesn't exist
-dir.create(r.obj.loc, showWarnings = FALSE)
-
-if (organism == "human"){
-  mt.marker = "^MT-"
-  hb.marker = "^HB[^(P)]"
-  ribo.marker = "^RP[SL]"
-} else if (organism == "mouse") {
-  mt.marker = "^mt-"
-  hb.marker = "^Hb[^(p)]"
-  ribo.marker = "^Rp[sl]"
-} else {
-  mt.marker = "NONE"
-  hb.marker = "NONE"
-  ribo.marker = "NONE"
-}
-
-ids <- c("blood", "tumor_tissue")
-```
-
-
 ## Read in the cellranger sample metrics csv files
 
 <br/>
@@ -130,7 +103,7 @@ sample metrics imported:
 ```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE}
 d10x.metrics <- lapply(ids, function(i){
   print(i)
-  metrics.path <- file.path(dataset_loc,i,"metrics_summary.csv")
+  metrics.path <- file.path(dataset.path,i,"metrics_summary.csv")
   metrics <- read.csv(metrics.path, colClasses = "character")
 })
 experiment.metrics <- do.call("rbind", d10x.metrics)
@@ -279,11 +252,19 @@ Objects created for:
 
 <br/>
 
-```{r load_data_hdf5, warning=FALSE,error=FALSE, message=FALSE, eval = import_h5, echo = import_h5}
+```{r load_tenx_data, warning=FALSE,error=FALSE, message=FALSE}
 
 d10x.data <- lapply(ids, function(i){
   print(i)
-  d10x <- Read10X_h5(file.path(dataset_loc,i,"raw_feature_bc_matrix.h5"))
+  
+  if (import_h5){
+    raw.data.path <- file.path(dataset.path,i,"raw_feature_bc_matrix.h5")
+    d10x <- Read10X_h5(raw.data.path)
+  } else {
+    raw.data.path <- file.path(dataset.path,i,"raw_feature_bc_matrix")
+    d10x <- Read10X(raw.data.path)
+  }
+  
   colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-")
   d10x
 })
@@ -292,15 +273,6 @@ names(d10x.data) <- ids
 # str(d10x.data)
 ```
 
-```{r load_data_matrix, warning=FALSE,error=FALSE, message=FALSE, eval = !import_h5, echo = !import_h5}
-
-d10x.data <- sapply(ids, function(i){
-  d10x <- Read10X(file.path(dataset_loc, i,"raw_feature_bc_matrix"))
-  colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-")
-  d10x
-})
-names(d10x.data) <- ids
-```
 
 ## GEX Barcode Rank Plot
 
@@ -357,7 +329,7 @@ experiment.data <- do.call("cbind", d10x.data)
 
 experiment.aggregate <- CreateSeuratObject(
   experiment.data,
-  project = experiment_name,
+  project = experiment.name,
   min.cells = 0,
   min.features = 300,
   names.field = 2,
@@ -497,7 +469,7 @@ relative.expression.boxplot <- boxplot(as.matrix(t(C[most_expressed, ])), cex = 
 Original dataset in Seurat class, with no filtering
 
 ```{r save, warning=FALSE,error=FALSE, message=FALSE}
-save(experiment.aggregate,file=paste0(r.obj.loc, "original_seurat_object.RData"))
+saveRDS(experiment.aggregate,file=part1.rds.save.file)
 
 save(list=c("sequencing.char.table",  
             "mapping.char.table.1",  
@@ -506,7 +478,7 @@ save(list=c("sequencing.char.table",
             "barcode.umi.fig.list",
             "part1.vln.plots",
             "relative.expression.boxplot"), 
-     file=paste0(r.obj.loc, "part1_stuff_for_report.RData"))
+     file=part1.file.for.report)
 ```
 
 ## Session Information
