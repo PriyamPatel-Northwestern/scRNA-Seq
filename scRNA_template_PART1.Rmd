@@ -1,15 +1,38 @@
 ---
-title: "project_name"
-author: "your_name"
 output:
-    html_document: default 
-    html_notebook: default
+  html_document:
+    pandoc_args: './common.yaml'
 ---
-Last Updated: TODO
+```{r import_libraries, warning=FALSE,error=FALSE,message=FALSE}
+# must have Seurat
+library(Seurat)
+library(kableExtra)
+library(ggplot2)
+library(Matrix)
+library(yaml)
+```
+
+```{r prepare_inline_variables, echo = FALSE}
+# get the datetime and set it to variable
+todays.date <- Sys.Date()
+formatted.date <- format(todays.date, format="%B %d %Y")
+
+config.params <- read_yaml("config.yaml")
+analyst.name <- config.params$project$`analyst-name`
+formatted.samples <- config.params$project$samples
+
+formatted.samples <- gsub("\"", "", formatted.samples)
+formatted.samples <- gsub("\ ", " </br> ", formatted.samples)
+formatted.samples <- gsub("-", " * ", formatted.samples)
+
+project.description <- config.params$project$`project-decription`
+```
+
+This report was generated on `r formatted.date`
 
 # Project Description:
 
-TODO
+`r project.description`
 
 
 # Part 1: Loading data from CellRanger into R
@@ -20,41 +43,27 @@ Part 1 focuses on getting data into R and setting up our initial object.
 
 [Seurat](http://satijalab.org/seurat/) (now Version 4) is a popular R package that is designed for QC, analysis, and exploration of single cell data. Seurat aims to enable users to identify and interpret sources of heterogeneity from single cell transcriptomic measurements, and to integrate diverse types of single cell data. 
 
-<!-- TODO -->
-
 The samples are,
 
-* enter
-* the
-* sample
-* names
-* here
+`r formatted.samples`
 
 ```{r}
-run_tests <- F
-import_h5 <- T # set to false if you want to import the matrix files
+run_tests <- config.params$analysis$run_tests
+import_h5 <- config.params$data$`import-h5` # set to false if you want to import the matrix files
 
 ```
 
 
-```{r, warning=FALSE,error=FALSE,message=FALSE}
-# must have Seurat
-library(Seurat)
-library(kableExtra)
-library(ggplot2)
-library(Matrix)
-```
 
 ### Setup the experiment folder and data info
 ```{r user_vals, warning=FALSE,error=FALSE, message=FALSE, echo = FALSE, eval = !run_tests}
-# TODO
-experiment_name = "experiment_name" 
+experiment_name = config.params$project$`project-name` 
 
 # This code assumes that each sample has it's own folder, with each folder containing a raw_feature_bc_matrix.h5 file
 # as well as a metrics_summary.csv file
-dataset_loc <- "path_to_h5_files" # path containing the folders containing the raw_feature_bc_matrix.h5 files
+dataset_loc <- config.params$data$`h5-file-path` # path containing the folders containing the raw_feature_bc_matrix.h5 files
 
-organism = ""
+organism = config.params$project$organism
 
 if (organism == "human"){
   mt.marker = "^MT-"
@@ -70,9 +79,13 @@ if (organism == "human"){
   ribo.marker = "NONE"
 }
 
-r.obj.loc <- "r_object_path" # Output folder
+r.obj.loc <- config.params$data$`rds-file-path` # Output folder
 
-ids <- c("todo", "todotoo") # sample names, need to match the folders containing the h5 files
+ids <- config.params$project$samples # sample names, need to match the folders containing the h5 files
+ids <- gsub("-", "", ids)
+ids <- gsub("\"", "", ids)
+ids <- strsplit(ids, "[[:space:]]")
+ids <- unlist(ids)
 ```
 
 
@@ -117,7 +130,8 @@ sample metrics imported:
 ```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE}
 d10x.metrics <- lapply(ids, function(i){
   print(i)
-  metrics <- read.csv(file.path(dataset_loc,i,"metrics_summary.csv"), colClasses = "character")
+  metrics.path <- file.path(dataset_loc,i,"metrics_summary.csv")
+  metrics <- read.csv(metrics.path, colClasses = "character")
 })
 experiment.metrics <- do.call("rbind", d10x.metrics)
 rownames(experiment.metrics) <- ids

@@ -1,0 +1,33 @@
+---
+project: 
+        analyst-name: "your name"
+        project-name: "project name"
+        project-decription: "long string here"
+        organism: "human or mouse"
+        samples:
+                -"sample1"
+                -"sample2"
+                -"sample3"
+                -"etc"
+
+data: 
+        import-h5: TRUE
+        h5-file-path: "path to parent folder" # required if import-h5
+        matrix-file-path: "path to matrix files" # required if not import-h5
+        rds-file-path: "path where r data is saved"
+
+analysis:
+        run_tests: FALSE
+        part2: 
+                mito_cutoff: 100 
+                RNA_count_floor: 0 
+                RNA_count_ceiling: 100000 
+                feature_count_floor: 0 
+                feature_count_ceiling: 10000 
+                rbc_cutoff: 100 
+                ribo_cutoff: 0
+        part4:
+                num_pcs: 50
+        part5:
+                resolution_selection: "RNA_snn_res.0.25"
+---
