@@ -1,9 +1,7 @@
 ---
-title: "project_name"
-author: "your_name"
 output:
-    html_document: default
-    html_notebook: default
+  html_document:
+    pandoc_args: './common.yaml'
 ---
 
 # Part 5: Marker genes
@@ -20,43 +18,65 @@ library(dplyr)
 library(future)
 library(kableExtra)
 library(cowplot)
-# library(parallel) # uncomment if using detectCores()
+library(yaml)
 ```
 
-```{r}
-run_tests = F
-```
+```{r prepare_inline_variables, echo = FALSE}
+# get the datetime and set it to variable
+todays.date <- Sys.Date()
+formatted.date <- format(todays.date, format="%B %d %Y")
 
-```{r}
-num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
-# num.cores.available=detectCores()  # Multithreading on quest analytics node or personal laptop. Load parallel library first.
-# num.cores.available <- 1
-```
-
-## Load the Seurat object
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval=!run_tests, echo = !run_tests}
-r.obj.loc <- "r_obj_path"
-ggplot.directory <- file.path(r.obj.loc, "ggplot")
-# Set this to the resolution that you want to do downstream analysis on
-resolution.selection <- "RNA_snn_res.0.25"
+config.args <- read_yaml("config.yaml")
 ```
 
 
-```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval= run_tests, echo = run_tests}
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds"
-load(file=file.path(r.obj.loc,"clustered_seurat_object_and_markers.RData"))
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+r.obj.loc <- config.args$data$`rds-file-path`
 
-ggplot.directory <- file.path(r.obj.loc, "ggplot")
-dir.create(ggplot.directory, showWarnings = F)
+resolution.selection <- config.args$analysis$part5$resolution_selection
 
-resolution.selection <- "RNA_snn_res.0.25"
+run_tests <- config.args$analysis$run_tests
+node.type <- config.args$analysis$node_type
+
+part5.rds.open.file <- config.args$analysis$part5$part5_rds_open_filename
+part5.rds.open.path <- file.path(r.obj.loc, part5.rds.open.file)
+
+part5.rds.save.file <- config.args$analysis$part5$part5_rds_save_filename
+part5.rds.save.path <- file.path(r.obj.loc, part5.rds.save.file)
+
+part5.file.for.report <- config.args$analysis$part5$part5_report_stuff_filename
+part5.file.report.path <- file.path(r.obj.loc, part5.file.for.report)
 ```
 
-```{r load_rdata, warning=FALSE,error=FALSE,message=FALSE, echo = !run_tests, eval = !run_tests}
-load(file=file.path(r.obj.loc,"clusters_seurat_object.RData"))
+### This report was generated on `r formatted.date`
 
+* clustering resolution: `r resolution.selection`
+* node.type: `r node.type`
+
+* starting with rds object at `r part5.rds.open.path`
+* saving rds object to `r part5.rds.save.path`
+* saving file for report at `r part5.file.report.path`
+
+
+
+```{r get_num_cores_available, echo = FALSE}
+if (node.type == "compute"){
+  # If using a compute node, then put this in the submission script:
+  # export MC_CORES=${SLURM_NTASKS}
+  num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
+} else {
+  library(parallel) 
+  num.cores.available <- detectCores() 
+}
+```
+
+## Load the Seurat object from part 4
+
+```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
+experiment.aggregate <- readRDS(file=part5.rds.open.path)
 Idents(experiment.aggregate) <- resolution.selection
 ```
+
 
 ### Choosing a resolution
 
@@ -226,7 +246,7 @@ save.for.rdata <- c("experiment.aggregate",
                     "top10",
                     "num.clusters.list")
 
-save(list=save.for.rdata, file=paste0(r.obj.loc,"clustered_seurat_object_and_markers.RData"))
+save(list=save.for.rdata, file=part5.rds.save.path)
 
 to.save.for.report <- c("cellcycle.umap",
                         "cluster.umap",
@@ -240,8 +260,7 @@ to.save.for.report <- c("cellcycle.umap",
                         "num.clusters.list")
 
 # to.save.for.report <- c("marker.gene.plots", "num.clusters.list")
-save(list = to.save.for.report, file=paste0(r.obj.loc, "part5_stuff_for_report.RData"))
-# save(experiment.aggregate, file=paste0(r.obj.loc, "clusters_seurat_object.RData"))
+save(list = to.save.for.report, file = part5.file.report.path) 
 ```
 
 ## Session Information

@@ -12,9 +12,8 @@ library(Matrix)
 library(yaml)
 ```
 
-### Setup the experiment folder and data info, and grab args from config file
 
-```{r user_vars}
+```{r user_vars, echo = FALSE}
 
 # get the datetime and set it to variable for inline printing
 todays.date <- Sys.Date()
@@ -31,9 +30,11 @@ project.description <- config.args$project$`project-decription`
 dataset.path <- config.args$data$parent_directory_path
 r.obj.loc <- config.args$data$`rds-file-path` # Output folder
 
-part1.rds.save.file <- file.path(r.obj.loc, config.args$analysis$part1$part1_rds_save_filename)
+part1.rds.save.file <- config.args$analysis$part1$part1_rds_save_filename
+part1.rds.save.path <- file.path(r.obj.loc, part1.rds.save.file)
 
-part1.file.for.report <-file.path(r.obj.loc, config.args$analysis$part1$part1_report_stuff_filename) 
+part1.file.for.report <- config.args$analysis$part1$part1_report_stuff_filename
+part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report) 
 
 # create rds folder if it doesn't exist already
 if (!file.exists(r.obj.loc)) {
@@ -43,15 +44,16 @@ if (!file.exists(r.obj.loc)) {
 }
 
 # setup the data location variables
-import_h5 <- config.args$data$`import-h5` # set to false if you want to import the matrix files
+import.h5 <- config.args$data$`import-h5` # set to false if you want to import the matrix files
 
 
 organism = config.args$project$organism
 
 # setup the sample names for printing in the inline report
 formatted.samples <- gsub("\"", "", formatted.samples)
-formatted.samples <- gsub("\ ", " </br> ", formatted.samples)
+formatted.samples <- gsub("\ ", "  \n ", formatted.samples)
 formatted.samples <- gsub("-", " * ", formatted.samples)
+formatted.samples <- paste0(formatted.samples, " <br /> ")
 
 # generate list of ids for use in importing data
 ids <- config.args$project$samples # sample names, need to match the folders containing the h5 files
@@ -75,29 +77,41 @@ if (organism == "human"){
 }
 ```
 
-This report was generated on `r formatted.date`
+## Report and variable details
+
+* This report was generated on `r formatted.date`
+
+* starting with raw data at `r dataset.path`
+* saving rds object to `r part1.rds.save.path`
+* saving file for report at `r part1.file.report.path`
+
+* organism: `r organism`
+* Importing h5?: `r import.h5`
 
 # Project Description:
 
 `r project.description`
 
+<br/>
+<br/>
+
+## Sample Names
+
+`r formatted.samples `
+
+<br/>
+<br/>
 
 # Part 1: Loading data from CellRanger into R
 
 Part 1 focuses on getting data into R and setting up our initial object.
 
-## Single Cell Analysis with Seurat
-
-[Seurat](http://satijalab.org/seurat/) (now Version 4) is a popular R package that is designed for QC, analysis, and exploration of single cell data. Seurat aims to enable users to identify and interpret sources of heterogeneity from single cell transcriptomic measurements, and to integrate diverse types of single cell data. 
-
-The samples are,
-
-`r formatted.samples`
+<br/>
+<br/>
 
 ## Read in the cellranger sample metrics csv files
 
 <br/>
-sample metrics imported:
 <br/>
 
 ```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE}
@@ -198,7 +212,7 @@ mapping.char.table.1 <- mapping.characteristics[, c(1:4)] %>%
 mapping.char.table.1
 ```
 
- </br>
+ <br/>
  
 ```{r table_map_characteristics_2, warning=FALSE,error=FALSE, message=FALSE}
 
@@ -257,7 +271,7 @@ Objects created for:
 d10x.data <- lapply(ids, function(i){
   print(i)
   
-  if (import_h5){
+  if (import.h5){
     raw.data.path <- file.path(dataset.path,i,"raw_feature_bc_matrix.h5")
     d10x <- Read10X_h5(raw.data.path)
   } else {

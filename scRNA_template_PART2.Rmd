@@ -14,7 +14,6 @@ library(ggplot2)
 library(knitr)
 library(kableExtra)
 library(future)
-library(parallel)
 library(yaml)
 ```
 
@@ -26,7 +25,7 @@ formatted.date <- format(todays.date, format="%B %d %Y")
 config.args <- read_yaml("config.yaml")
 ```
 
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE}
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
 r.obj.loc <- config.args$data$`rds-file-path`
 organism <- config.args$project$organism
 
@@ -39,7 +38,7 @@ rbc.cutoff = config.args$analysis$part2$rbc_cutoff
 ribo.cutoff = config.args$analysis$part2$ribo_cutoff
 
 run_tests <- config.args$analysis$run_tests
-node_type <- config.args$analysis$node_type
+node.type <- config.args$analysis$node_type
 
 part2.rds.open.file <- config.args$analysis$part2$part2_rds_open_filename
 part2.rds.open.path <- file.path(r.obj.loc, part2.rds.open.file)
@@ -51,14 +50,31 @@ part2.file.for.report <- config.args$analysis$part2$part2_report_stuff_filename
 part2.file.report.path <- file.path(r.obj.loc, part2.file.for.report)
 ```
 
-This report was generated on `r formatted.date`
+### This report was generated on `r formatted.date`
+
+* node.type: `r node.type`
+
+* starting with rds object at `r part2.rds.open.path`
+* saving rds object to `r part2.rds.save.path`
+* saving file for report at `r part2.file.report.path`
+
+* mito cutoff: `r mito.cutoff`
+* RNA count floor: `r RNA.count.floor`
+* RNA count ceiling: `r RNA.count.ceiling`
+* Feature count floor: `r feature.count.floor`
+* Feature count ceiling: `r feature.count.ceiling`
+* RBC cutoff: `r rbc.cutoff`
+* Ribosomal cutoff: `r ribo.cutoff`
+
+
 
 ```{r get_num_cores_available, echo = FALSE}
-if (node_type == "compute"){
+if (node.type == "compute"){
   # If using a compute node, then put this in the submission script:
   # export MC_CORES=${SLURM_NTASKS}
   num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
 } else {
+  library(parallel)
   num.cores.available <- detectCores() 
 }
 ```
