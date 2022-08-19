@@ -46,6 +46,18 @@ part5.rds.save.path <- file.path(r.obj.loc, part5.rds.save.file)
 
 part5.file.for.report <- config.args$analysis$part5$part5_report_stuff_filename
 part5.file.report.path <- file.path(r.obj.loc, part5.file.for.report)
+
+ggplot.directory <- file.path(r.obj.loc, config.args$analysis$part5$ggplot_dir)
+marker.gene.dir <- file.path(r.obj.loc, config.args$analysis$part5$marker_gene_dir)
+
+# create ggplot folder if it doesn't exist already
+if (!file.exists(ggplot.directory)) {
+ dir.create(ggplot.directory, showWarnings = FALSE, recursive = TRUE)
+}
+
+if (!file.exists(marker.gene.dir)) {
+ dir.create(marker.gene.dir, showWarnings = FALSE, recursive = TRUE)
+}
 ```
 
 ### This report was generated on `r formatted.date`
@@ -56,7 +68,17 @@ part5.file.report.path <- file.path(r.obj.loc, part5.file.for.report)
 * starting with rds object at `r part5.rds.open.path`
 * saving rds object to `r part5.rds.save.path`
 * saving file for report at `r part5.file.report.path`
+* ggplot figures at `r ggplot.directory`
+* Lists of marker genes are at `r marker.gene.dir`
 
+```{r for_testing_only, eval = FALSE, echo = FALSE}
+
+# If you've already run findAllMarkers but want to test other parts
+# of this script, then set eval to TRUE here and set the find_all_markers
+# code chunk below to eval=FALSE
+load(file=part5.rds.save.path)
+
+```
 
 
 ```{r get_num_cores_available, echo = FALSE}
@@ -155,7 +177,7 @@ Seurat can help you find markers that define clusters via differential expressio
 
 ### FindAllMarkers can be used to automate the process across all genes.
 
-```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE, eval = !run_tests}
+```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE}
 # DefaultAssay(experiment.aggregate) <- 'RNA'
 max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
 options(future.globals.maxSize= max.size)
@@ -258,6 +280,14 @@ to.save.for.report <- c("cellcycle.umap",
                         "clusters.to.sample.table",
                         "heatmap.genes.by.cluster",
                         "num.clusters.list")
+
+num.clusters <- length(unique(markers_all$cluster))
+
+for (i in seq(0, num.clusters - 1)){
+  table.filename <- file.path(marker.gene.dir, paste0("cluster", i, "_marker_genes_", resolution.selection, ".csv"))
+  these.markers <- markers_all[markers_all$cluster == i,]
+  write.csv(x = these.markers, file = table.filename, quote = FALSE)
+}
 
 # to.save.for.report <- c("marker.gene.plots", "num.clusters.list")
 save(list = to.save.for.report, file = part5.file.report.path) 

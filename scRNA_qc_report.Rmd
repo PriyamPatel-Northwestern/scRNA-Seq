@@ -66,15 +66,13 @@ ids <- unlist(ids)
 <br/>
 <br/>
 
-## Sample Names
-
-
-
-
 # Analysis software used
 [Cellranger](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger) was used to align reads and generate feature-barcode matrices.
 
 [Seurat](http://satijalab.org/seurat/) (now Version 4) is a popular R package that is designed for QC, analysis, and exploration of single cell data. Seurat aims to enable users to identify and interpret sources of heterogeneity from single cell transcriptomic measurements, and to integrate diverse types of single cell data. Seurat was used to filter data, run pca, and generate and visualize clusters.
+
+<br/>
+<br/>
 
 # Sample QC
 
@@ -88,7 +86,7 @@ ids <- unlist(ids)
 <br/>
 
 
-## Raw data metrics
+### Raw data metrics
 
 Here is a table showing the raw sequencing metrics for all samples.
 <!-- todo: fill out any observations you have about the sequencing metrics -->
@@ -120,12 +118,12 @@ cell.char.table
 <br/>
 <br/>
 
-## Basic first filter criteria applied
+### Basic first filter criteria applied
 
 Remove genes that do not occur in a minimum of 0 cells and remove cells that don't have a minimum of 300 features
 
 
-## Violin Plots of raw data
+### Violin Plots of raw data
 <br/>
 
 ##### nFeature: This is the number of different genes being represented by the data in each cell.
@@ -250,7 +248,7 @@ ridgeplot.postfiltering
 <br/>
 <br/>
 
-## Session Information
+### Session Information
 ```{r sessioinfo}
 sessionInfo()
 ```
