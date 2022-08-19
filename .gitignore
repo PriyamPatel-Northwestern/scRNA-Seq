@@ -43,3 +43,8 @@ vignettes/*.pdf
 
 # slurm output logs
 *.o*
+logs/
+
+
+!execute_pipeline-Ex.R
+!run_templates.sh

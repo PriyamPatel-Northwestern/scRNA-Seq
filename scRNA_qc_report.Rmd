@@ -1,48 +1,92 @@
 ---
-title: "project_name"
-author: "your_name"
 output:
-    html_document: default 
-    html_notebook: default
+  html_document:
+    pandoc_args: './common.yaml'
 ---
-Last Updated: TODO
-
-# Project Description:
-
-TODO
-
-# Project Description:
-
-<!-- todo: enter the users description of the project here -->
 
 ```{r load_libraries, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
 # must have Seurat
 library(Seurat)
 library(kableExtra)
 library(ggplot2)
+library(yaml)
 ```
+
+
+```{r user_vars, echo = FALSE}
+
+# get the datetime and set it to variable for inline printing
+todays.date <- Sys.Date()
+formatted.date <- format(todays.date, format="%B %d %Y")
+
+# Import the config file
+config.args <- read_yaml("config.yaml")
+
+# set project variables
+analyst.name <- config.args$project$`analyst-name`
+formatted.samples <- config.args$project$samples
+project.description <- config.args$project$`project-decription`
+dataset.path <- config.args$data$parent_directory_path
+r.obj.loc <- config.args$data$`rds-file-path` # Output folder
+
+# Get paths for the files containing the info to make this report
+part1.file.for.report <- config.args$analysis$part1$part1_report_stuff_filename
+part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report) 
+
+part2.file.for.report <- config.args$analysis$part2$part2_report_stuff_filename
+part2.file.report.path <-file.path(r.obj.loc, part2.file.for.report) 
+
+# Load the report files
+load(part1.file.report.path)
+load(part2.file.report.path)
+
+organism = config.args$project$organism
+
+# setup the sample names for printing in the inline report
+formatted.samples <- gsub("\"", "", formatted.samples)
+formatted.samples <- gsub("\ ", "  \n ", formatted.samples)
+formatted.samples <- gsub("-", " * ", formatted.samples)
+formatted.samples <- paste0(formatted.samples, " <br /> ")
+
+# generate list of ids for use in importing data
+ids <- config.args$project$samples # sample names, need to match the folders containing the h5 files
+ids <- gsub("-", "", ids)
+ids <- gsub("\"", "", ids)
+ids <- strsplit(ids, "[[:space:]]")
+ids <- unlist(ids)
+```
+
+* This report was generated on `r formatted.date`
+* organism: `r organism`
+
+# Project Description:
+
+`r project.description`
+
+<br/>
+<br/>
 
 # Analysis software used
 [Cellranger](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger) was used to align reads and generate feature-barcode matrices.
 
 [Seurat](http://satijalab.org/seurat/) (now Version 4) is a popular R package that is designed for QC, analysis, and exploration of single cell data. Seurat aims to enable users to identify and interpret sources of heterogeneity from single cell transcriptomic measurements, and to integrate diverse types of single cell data. Seurat was used to filter data, run pca, and generate and visualize clusters.
 
+<br/>
+<br/>
+
 # Sample QC
 
 
 ### Sample names
 
-* sample1
-* sample2
-
-```{r exp_setup, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
-r.obj.loc <- "path/to/rds/directory"
-load(paste0(r.obj.loc, "part1_stuff_for_report.RData"))
-load(paste0(r.obj.loc, "part2_stuff_for_report.RData"))
-```
+`r formatted.samples `
 
 
-## Raw data metrics
+<br/>
+<br/>
+
+
+### Raw data metrics
 
 Here is a table showing the raw sequencing metrics for all samples.
 <!-- todo: fill out any observations you have about the sequencing metrics -->
@@ -74,12 +118,12 @@ cell.char.table
 <br/>
 <br/>
 
-## Basic first filter criteria applied
+### Basic first filter criteria applied
 
 Remove genes that do not occur in a minimum of 0 cells and remove cells that don't have a minimum of 300 features
 
 
-## Violin Plots of raw data
+### Violin Plots of raw data
 <br/>
 
 ##### nFeature: This is the number of different genes being represented by the data in each cell.
@@ -204,7 +248,7 @@ ridgeplot.postfiltering
 <br/>
 <br/>
 
-## Session Information
+### Session Information
 ```{r sessioinfo}
 sessionInfo()
 ```

@@ -1,12 +1,9 @@
 ---
-title: "project_name"
-author: "your_name"
 output:
-    html_document: default
-    html_notebook: default
+  html_document:
+    pandoc_args: './common.yaml'
 ---
 
-Last Updated: "date"
 
 # Part 3: PCA and choice in number of PCS
 
@@ -17,27 +14,57 @@ library(ggplot2)
 library(kableExtra)
 library(future)
 library(dplyr)
-# library(parallel) # uncomment if using detectCores
+library(yaml)
 ```
 
-```{r}
-run_tests=F
-num.cores.available=as.numeric(Sys.getenv("SLURM_NTASKS"))
-# num.cores.available=detectCores()  # Multithreading on quest analytics node or personal laptop. Load parallel library first.
-# num.cores.available=1
+```{r prepare_inline_variables, echo = FALSE}
+# get the datetime and set it to variable
+todays.date <- Sys.Date()
+formatted.date <- format(todays.date, format="%B %d %Y")
+
+config.args <- read_yaml("config.yaml")
 ```
 
-## Load the Seurat object
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, eval = !run_tests, echo = !run_tests}
-r.obj.loc <- "r_obj_path"
+```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+r.obj.loc <- config.args$data$`rds-file-path`
+
+run_tests <- config.args$analysis$run_tests
+node.type <- config.args$analysis$node_type
+
+part3.rds.open.file <- config.args$analysis$part3$part3_rds_open_filename
+part3.rds.open.path <- file.path(r.obj.loc, part3.rds.open.file)
+
+part3.rds.save.file <- config.args$analysis$part3$part3_rds_save_filename
+part3.rds.save.path <- file.path(r.obj.loc, part3.rds.save.file)
+
+part3.file.for.report <- config.args$analysis$part3$part3_report_stuff_filename
+part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
 ```
 
-```{r load_rdata_test, warning=FALSE,error=FALSE,message=FALSE, eval = run_tests, echo = run_tests}
-r.obj.loc <- "/Volumes/My_Passport_for_Mac/tenX_projects/LePoole01/rds/"
+### This report was generated on `r formatted.date`
+
+* node.type: `r node.type`
+
+* starting with rds object at `r part3.rds.open.path`
+* saving rds object to `r part3.rds.save.path`
+* saving file for report at `r part3.file.report.path`
+
+
+```{r get_num_cores_available, echo = FALSE}
+if (node.type == "compute"){
+  # If using a compute node, then put this in the submission script:
+  # export MC_CORES=${SLURM_NTASKS}
+  num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
+} else {
+  library(parallel) 
+  num.cores.available <- detectCores() 
+}
 ```
 
-```{r load_rdata, warning=FALSE,error=FALSE,message=FALSE}
-load(file=file.path(r.obj.loc, "pca_sample_corrected.RData"))
+## Load the Seurat object from part 2
+
+```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
+experiment.aggregate <- readRDS(file=part3.rds.open.path)
 ```
 
 
@@ -46,6 +73,9 @@ load(file=file.path(r.obj.loc, "pca_sample_corrected.RData"))
 ScaleData - Scales and centers genes in the dataset. If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered unless otherwise specified. Here we regress out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
 ```{r scale_data, warning=FALSE,error=FALSE,message=FALSE}
+max.size <- (as.numeric(object.size(experiment.aggregate)) * 3.0)
+options(future.globals.maxSize= max.size)
+
 plan("multisession", workers = num.cores.available) # multithreading
 experiment.aggregate <- ScaleData(
   object = experiment.aggregate,
@@ -111,7 +141,7 @@ cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(captio
 ```
 ## Finally, lets save the filtered and normalized data
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
-save(experiment.aggregate, file=paste0(r.obj.loc,"pca_sample_corrected.RData"))
+saveRDS(experiment.aggregate, file=part3.rds.save.path)
 
 to.save.for.report <- c("pca.loadings.1",
                         "pca.loadings.2",
@@ -121,7 +151,7 @@ to.save.for.report <- c("pca.loadings.1",
                         "pca.heatmap.2",
                         "cell.cycle.table")
 
-save(list = to.save.for.report, file=paste0(r.obj.loc, "part3_stuff_for_report.RData"))
+save(list = to.save.for.report, file=part3.file.report.path)
 ```
 
 ## Session Information
