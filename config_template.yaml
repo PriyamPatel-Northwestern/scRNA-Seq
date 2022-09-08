@@ -49,4 +49,5 @@ analysis:
                 part5_report_stuff_filename: "part5_stuff_for_report.RData"
                 part5_rds_save_filename: "clustered_seurat_object_and_markers.RDS"
                 ggplot_dir: "ggplot"
+                marker_gene_dir: "marker_genes"
 ---
