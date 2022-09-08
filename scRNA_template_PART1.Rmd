@@ -464,6 +464,28 @@ FeatureScatter( experiment.aggregate, "percent.mito", "percent.rbc")
 FeatureScatter( experiment.aggregate, "nFeature_RNA", "percent.rbc")
 ```
 
+```{r convert_sparse_mat_to_mat, warning=FALSE,error=FALSE,message=FALSE }
+
+# Function for converting sparse matrix to regular matrix.
+# see https://programmerah.com/the-sparse-matrix-of-r-language-is-too-large-to-be-used-as-matrix-8856/
+
+convert_sparse_mat_to_mat <- function(mat){
+  tmp <- matrix(data=0L, nrow = mat@Dim[1], ncol = mat@Dim[2])
+
+  row_pos <- mat@i+1
+  col_pos <- findInterval(seq(mat@x)-1,mat@p[-1])+1
+  val <- mat@x
+
+  for (i in seq_along(val)){
+    tmp[row_pos[i],col_pos[i]] <- val[i]
+    }
+  row.names(tmp) <- mat@Dimnames[[1]]
+  colnames(tmp) <- mat@Dimnames[[2]]
+  return(tmp)
+}
+
+```
+
 # Top 20 most highly expressed genes in this dataset
 
 ## Relative expression of each gene per cell
@@ -471,7 +493,9 @@ FeatureScatter( experiment.aggregate, "nFeature_RNA", "percent.rbc")
 par(mar = c(4, 8, 2, 1))
 C <- experiment.aggregate@assays$RNA@counts
 C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
-most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
+C_mat <- convert_sparse_mat_to_mat(C)
+# most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
+most_expressed <- order(apply(C_mat, 1, median), decreasing = T)[20:1]
 relative.expression.boxplot <- boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
     col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 
