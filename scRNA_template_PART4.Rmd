@@ -76,7 +76,7 @@ experiment.aggregate <- readRDS(file=part4.rds.open.path)
 
 ## So how many features should we use? Use too few and your leaving out interesting variation that may define cell types, use too many and you add in noise? maybe?
 
-Lets choose the first 50, based on our prior part.
+Lets choose the first `r num.pcs`, based on our prior part.
 
 ```{r use_pcs, warning=FALSE,error=FALSE,message=FALSE}
 use.pcs = 1:num.pcs

@@ -203,10 +203,12 @@ avg_diff appears to be the difference in log(x = mean(x = exp(x = x) - 1) + 1) b
 
 
 ### Feature plots and Violin Plots of Marker Genes
-```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE}
+```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, fig.width = 25, fig.height = 20}
 feat_plots_top_genes <- function(cluster.num){  
+  # cluster.num = 1
   print(paste0("Cluster number ", cluster.num))
   curr.markers <- markers_all[markers_all$cluster == cluster.num,] 
+  num.markers.to.plot <- 6
   # print(head(curr.markers))
   
   feat.plot.path <- file.path(ggplot.directory, paste0("featurePlot_cluster_", cluster.num, ".png"))
@@ -214,21 +216,36 @@ feat_plots_top_genes <- function(cluster.num){
   
   feat.plot.list <- FeaturePlot(
     experiment.aggregate,
-    curr.markers$gene[1:6],
+    curr.markers$gene[1:num.markers.to.plot],
     cols = c("lightgrey", "blue"),
-    ncol = 3) 
+    ncol = 3,
+    pt.size = 2,
+    label.size = 30) 
   
-  # feat.plot <- cowplot::plot_grid(plotlist = feat.plot.list)
-  plot.title <- ggdraw() + draw_label(paste0("Cluster ", cluster.num), fontface = 'bold')
+  # Fix the axis labels and main title sizes for the feature plots
+  for (i in 1:num.markers.to.plot){
+    feat.plot.list[[i]] <- feat.plot.list[[i]] + theme(axis.text.x = element_text(angle=45, hjust=1, size=30),
+                                                       axis.text.y = element_text(size = 30),
+                                                       plot.title = element_text(size=30))
+  }
+  
+  plot.title <- ggdraw() + draw_label(paste0("Cluster ", cluster.num), fontface = 'bold', size = 30)
   print(cowplot::plot_grid(plot.title, feat.plot.list, ncol = 1, rel_heights = c(0.1, 1)))
+  
    
   ggsave(feat.plot.path)
   
   
   vln.plot.list <- VlnPlot(object = experiment.aggregate,
-                      features = curr.markers$gene[1:6],
+                      features = curr.markers$gene[1:num.markers.to.plot],
                       pt.size = 0.05)
   
+  # Fix the axis labels and main title sizes for the violin plots
+  for (i in 1:num.markers.to.plot){
+    vln.plot.list[[i]] <- vln.plot.list[[i]] + theme(axis.text.x = element_text(angle=45, hjust=1, size=30),
+                                                       axis.text.y = element_text(size = 30),
+                                                       plot.title = element_text(size=30))
+  }
   print(cowplot::plot_grid(plot.title, vln.plot.list, ncol = 1, rel_heights = c(0.1, 1)))
   
 
@@ -239,11 +256,12 @@ feat_plots_top_genes <- function(cluster.num){
 
 # these.markers <- markers_all[markers_all$cluster == 6,]
 # VlnPlot(object = experiment.aggregate, features = these.markers$gene[1:6], pt.size = 0.05)
-# num.clusters.list = c(0, 1, 2)
+# num.clusters.list = c(0, 1)
 num.clusters.list <- unique(markers_all$cluster)
 # num.clusters.list
 sapply(num.clusters.list, feat_plots_top_genes)
 ```
+
 
 <br/>
 <br/>

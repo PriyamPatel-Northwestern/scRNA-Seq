@@ -52,6 +52,11 @@ if (!file.exists(ggplot.directory)) {
 }
 ```
 
+<br/>
+
+# Project Description:
+
+`r project.description`
 
 
 <!-- note: These br html tags are used to insert blank lines in the final report.  -->
@@ -80,7 +85,7 @@ elbow.plot
 <br/>
 
 <!-- todo: replace numpcs below with the number of pcs you used, and uncomment the line below -->
-We tend to err on the side of keeping too much data and so I chose to go with 50 PCs for the downstream analysis.
+We tend to err on the side of keeping too much data and so I chose to go with `r num.pcs` PCs for the downstream analysis.
 
 ## Clustering results
 
@@ -200,7 +205,7 @@ cell.cycle.table
 
 For each cluster, which genes are differentially expressed in that 
 cluster compared to all other clusters combined?
-```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE, fig.width = 25, fig.height = 20}
 figure.list <- list()
 
 # Note that knitr::include_graphics doesn't work in a loop. Instead, I'll make a list of lists of filenames
@@ -216,6 +221,7 @@ figure.list <- sapply(num.clusters.list, function(cluster.num){
 
 knitr::include_graphics(unlist(figure.list))
 ```
+
 <br/>
 <br/>
 
