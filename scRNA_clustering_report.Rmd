@@ -21,6 +21,10 @@ formatted.date <- format(todays.date, format="%B %d %Y")
 # Import the config file
 config.args <- read_yaml("config.yaml")
 
+# Info for printing in the report
+project.description <- config.args$project$`project-decription`
+num.pcs <- config.args$analysis$part4$num_pcs
+
 # set project variables
 r.obj.loc <- config.args$data$`rds-file-path` # Output folder
 resolution.selection <- config.args$analysis$part5$resolution_selection
