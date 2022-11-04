@@ -2,6 +2,8 @@
 output:
   html_document:
     pandoc_args: './common.yaml'
+params: 
+	config.args: "./config.yaml"
 ---
 
 # Part 4: clustering
@@ -21,7 +23,7 @@ library(yaml)
 todays.date <- Sys.Date()
 formatted.date <- format(todays.date, format="%B %d %Y")
 
-config.args <- read_yaml("config.yaml")
+config.args <- read_yaml(params$config.args)
 ```
 
 ```{r set_fig_dims}
