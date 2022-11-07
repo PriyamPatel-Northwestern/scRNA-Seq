@@ -42,13 +42,26 @@ ribo.cutoff = config.args$analysis$part2$ribo_cutoff
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
+part1.suffix <- config.args$analysis$part1$part1_suffix
+part2.suffix <- config.args$analysis$part2$part2_suffix
+
+# Generally I don't expect part1 to be modified, but I'm sure I'll be proven wrong
+# For now don't allow other file suffixes for the part1 output to avoid
+# having to generate it for every downstream mod
 part2.rds.open.file <- config.args$analysis$part2$part2_rds_open_filename
+part2.rds.open.file <- sub(".RDS", paste0(part1.suffix, ".RDS"), part2.rds.open.file )
 part2.rds.open.path <- file.path(r.obj.loc, part2.rds.open.file)
 
+#--------------------------------------------------#
+# Set up the filenames by taking the normal output
+# filename from the config and adding the suffix
+#--------------------------------------------------#
 part2.rds.save.file <- config.args$analysis$part2$part2_rds_save_filename
+part2.rds.save.file <- sub(".RDS", paste0(part2.suffix, ".RDS"), part2.rds.save.file )
 part2.rds.save.path <- file.path(r.obj.loc, part2.rds.save.file)
 
 part2.file.for.report <- config.args$analysis$part2$part2_report_stuff_filename
+part2.file.for.report <-sub(".RData", paste0(part2.suffix, ".RData"), part2.file.for.report)
 part2.file.report.path <- file.path(r.obj.loc, part2.file.for.report)
 ```
 
