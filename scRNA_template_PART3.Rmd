@@ -33,14 +33,33 @@ r.obj.loc <- config.args$data$`rds-file-path`
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
+batch.correction.method <- config.args$analysis$part3$batch_correction
+
+bc.orig.ident = FALSE
+bc.sctransform = FALSE
+
+if (batch.correction.method == "orig.ident"){
+  bc.orig.ident = TRUE
+} else if (batch.correction.method == "sctransform"){
+  bc.sctransform = TRUE
+}
+
+
+part2.suffix <- config.args$analysis$part2$part2_suffix
+part3.suffix <- config.args$analysis$part3$part3_suffix
+
 part3.rds.open.file <- config.args$analysis$part3$part3_rds_open_filename
+part3.rds.open.file <- sub(".RDS", paste0(part2.suffix, ".RDS"), part3.rds.open.file )
 part3.rds.open.path <- file.path(r.obj.loc, part3.rds.open.file)
 
 part3.rds.save.file <- config.args$analysis$part3$part3_rds_save_filename
+part3.rds.save.file <- sub(".RDS", paste0(part3.suffix, ".RDS"), part3.rds.save.file )
 part3.rds.save.path <- file.path(r.obj.loc, part3.rds.save.file)
 
 part3.file.for.report <- config.args$analysis$part3$part3_report_stuff_filename
+part3.file.for.report <- sub(".RData", paste0(part3.suffix, ".RDS"), part3.file.for.report )
 part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
+
 ```
 
 ### This report was generated on `r formatted.date`

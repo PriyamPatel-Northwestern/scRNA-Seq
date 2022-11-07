@@ -39,6 +39,7 @@ analysis:
                 part3_rds_open_filename: "pre_sample_corrected.RDS"
                 part3_rds_save_filename: "pca_sample_corrected.RDS"
                 part3_report_stuff_filename: "part3_stuff_for_report.RData"
+                batch_correction: "sctransform"
                 part3_suffix: ""
         part4:
                 part4_rds_open_filename: "pca_sample_corrected.RDS"
