@@ -40,17 +40,28 @@ resolution.selection <- config.args$analysis$part5$resolution_selection
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
+part4.suffix <- config.args$analysis$part4$part4_suffix
+part5.suffix <- config.args$analysis$part5$part5_suffix
+
 part5.rds.open.file <- config.args$analysis$part5$part5_rds_open_filename
+part5.rds.open.file <- sub(".RDS", paste0(part4.suffix, ".RDS"), part5.rds.open.file )
 part5.rds.open.path <- file.path(r.obj.loc, part5.rds.open.file)
 
 part5.rds.save.file <- config.args$analysis$part5$part5_rds_save_filename
+part5.rds.save.file <- sub(".RDS", paste0(part5.suffix, ".RDS"), part5.rds.save.file )
 part5.rds.save.path <- file.path(r.obj.loc, part5.rds.save.file)
 
 part5.file.for.report <- config.args$analysis$part5$part5_report_stuff_filename
+part5.file.for.report <- sub(".RDS", paste0(part5.suffix, ".RData"), part5.file.for.report )
 part5.file.report.path <- file.path(r.obj.loc, part5.file.for.report)
 
-ggplot.directory <- file.path(r.obj.loc, config.args$analysis$part5$ggplot_dir)
-marker.gene.dir <- file.path(r.obj.loc, config.args$analysis$part5$marker_gene_dir)
+ggplot.directory.name <- config.args$analysis$part5$ggplot_dir
+ggplot.directory.name <- paste0(ggplot.directory.name, part5.suffix)
+ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
+
+marker.gene.dir.name <- config.args$analysis$part5$marker_gene_dir
+marker.gene.dir.name <- paste0(marker.gene.dir.name, part5.suffix)
+marker.gene.dir <- file.path(r.obj.loc, marker.gene.dir.name)
 
 # create ggplot folder if it doesn't exist already
 if (!file.exists(ggplot.directory)) {

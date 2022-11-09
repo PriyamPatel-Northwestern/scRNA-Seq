@@ -31,12 +31,20 @@ project.description <- config.args$project$`project-decription`
 dataset.path <- config.args$data$parent_directory_path
 r.obj.loc <- config.args$data$`rds-file-path` # Output folder
 
-# Get paths for the files containing the info to make this report
+part1.suffix <- config.args$analysis$part1$part1_suffix
+part2.suffix <- config.args$analysis$part2$part2_suffix
+
+#--------------------------------------------------#
+# Set up the filenames by taking the normal output
+# filename from the config and adding the suffix
+#--------------------------------------------------#
 part1.file.for.report <- config.args$analysis$part1$part1_report_stuff_filename
-part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report) 
+part1.file.for.report <-sub(".RData", paste0(part1.suffix, ".RData"), part1.file.for.report)
+part1.file.report.path <- file.path(r.obj.loc, part1.file.for.report)
 
 part2.file.for.report <- config.args$analysis$part2$part2_report_stuff_filename
-part2.file.report.path <-file.path(r.obj.loc, part2.file.for.report) 
+part2.file.for.report <-sub(".RData", paste0(part2.suffix, ".RData"), part2.file.for.report)
+part2.file.report.path <- file.path(r.obj.loc, part2.file.for.report)
 
 # Load the report files
 load(part1.file.report.path)

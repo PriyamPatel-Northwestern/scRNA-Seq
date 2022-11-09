@@ -39,13 +39,19 @@ num.pcs <- config.args$analysis$part4$num_pcs
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
+part3.suffix <- config.args$analysis$part3$part3_suffix
+part4.suffix <- config.args$analysis$part4$part4_suffix
+
 part4.rds.open.file <- config.args$analysis$part4$part4_rds_open_filename
+part4.rds.open.file <- sub(".RDS", paste0(part3.suffix, ".RDS"), part4.rds.open.file )
 part4.rds.open.path <- file.path(r.obj.loc, part4.rds.open.file)
 
 part4.rds.save.file <- config.args$analysis$part4$part4_rds_save_filename
+part4.rds.save.file <- sub(".RDS", paste0(part4.suffix, ".RDS"), part4.rds.save.file )
 part4.rds.save.path <- file.path(r.obj.loc, part4.rds.save.file)
 
 part4.file.for.report <- config.args$analysis$part4$part4_report_stuff_filename
+part4.file.for.report <- sub(".RData", paste0(part4.suffix, ".RData"), part4.file.for.report )
 part4.file.report.path <- file.path(r.obj.loc, part4.file.for.report)
 ```
 

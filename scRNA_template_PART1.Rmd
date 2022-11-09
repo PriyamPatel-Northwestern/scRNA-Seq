@@ -32,11 +32,19 @@ project.description <- config.args$project$`project-decription`
 dataset.path <- config.args$data$parent_directory_path
 r.obj.loc <- config.args$data$`rds-file-path` # Output folder
 
+# When trying different parameters in the analysis you can create
+# alternate output files with this 'suffix' argument in the config
+part1.suffix <- config.args$analysis$part1$part1_suffix
+
 part1.rds.save.file <- config.args$analysis$part1$part1_rds_save_filename
+part1.rds.save.file <- sub(".RDS", paste0(part1.suffix, ".RDS"), part1.rds.save.file )
+
 part1.rds.save.path <- file.path(r.obj.loc, part1.rds.save.file)
 
 part1.file.for.report <- config.args$analysis$part1$part1_report_stuff_filename
-part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report) 
+part1.file.for.report <-sub(".RData", paste0(part1.suffix, ".RData"), part1.file.for.report)
+
+part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report)
 
 # create rds folder if it doesn't exist already
 if (!file.exists(r.obj.loc)) {
