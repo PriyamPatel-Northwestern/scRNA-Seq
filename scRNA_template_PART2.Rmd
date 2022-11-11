@@ -1,9 +1,9 @@
 ---
-output:
-  html_document:
-    pandoc_args: './common.yaml'
-params: 
-	config.args: "./config.yaml"
+output: 
+  html_document: 
+pandoc_args: './common.yaml'   
+params:     
+config_args: "configs/config_template.yaml"
 ---
 
 # Part 2: Some QA/QC, filtering, normalization, and assigning variable genes
@@ -204,123 +204,6 @@ ridgeplot.postfiltering
 ```
 
 <br/>
-
-## Next we want to normalize the data
-
-After filtering out cells from the dataset, the next step is to normalize the data. By default, we employ a global-scaling normalization method LogNormalize that normalizes the gene expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and then log-transforms the data.
-
-```{r normalize_help, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
-?NormalizeData
-```
-
-```{r normalize, warning=FALSE,error=FALSE,message=FALSE}
-max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
-options(future.globals.maxSize= max.size)
-
-print(paste0("max.size = ", max.size, ", num.cores.available = ", num.cores.available))
-plan("multisession", workers = num.cores.available) # multithreading
-
-experiment.aggregate <- NormalizeData(
-  object = experiment.aggregate,
-  normalization.method = "LogNormalize",
-  scale.factor = 10000)
-```
-
-### Calculate Cell-Cycle with Seurat
-[Dissecting the multicellular ecosystem of metastatic melanoma by single-cell RNA-seq](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4944528/)
-
-The list of genes comes with Seurat (only for human). We can use biomaRt to convert the human gene symbols to mouse.
-
-
-```{r cellcycle, warning=FALSE,error=FALSE,message=FALSE}
-# Mouse Code
-convertHumanGeneList <- function(x){
-  require("biomaRt")
-  human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://dec2021.archive.ensembl.org/") 
-  mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
-
-  genes = getLDS(attributes = c("hgnc_symbol"), filters = "hgnc_symbol", values = x, mart = human, attributesL = c("mgi_symbol"), martL = mouse, uniqueRows=T)
-
-  humanx <- unique(genes[, 2])
-
-  # Print the first 6 genes found to the screen
-  print(head(humanx))
-  return(humanx)
-}
-
-if (organism == "mouse"){
-  m.s.genes <- convertHumanGeneList(cc.genes.updated.2019$s.genes)
-  m.g2m.genes <- convertHumanGeneList(cc.genes.updated.2019$g2m.genes)
-
-  # Create our Seurat object and complete the initialization steps
-  experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = m.s.genes, g2m.features = m.g2m.genes, set.ident = TRUE)
-} else if (organism == "human"){
-  # Human Code
-  s.genes <- (cc.genes$s.genes)
-  g2m.genes <- (cc.genes$g2m.genes)
-  
-  # Create our Seurat object and complete the initialization steps
-  experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
-}
-```
-
-#### Table of cell cycle (seurate)
-
-```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE}
-cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
-
-cell.cycle.table
-```
-
-#### Fixing the defualt "Ident" in Seurat
-
-```{r update_ident, warning=FALSE,error=FALSE,message=FALSE}
-table(Idents(experiment.aggregate))
-## So lets change it back to samplename
-Idents(experiment.aggregate) <- "orig.ident"
-table(Idents(experiment.aggregate))
-```
-
-
-## Identify variable genes
-
-The function FindVariableFeatures identifies the most highly variable genes (default 2000 genes) by fitting a line to the relationship of log(variance) and log(mean) using loess smoothing, uses this information to standardize the data, then calculates the variance of the standardized data.  This helps avoid selecting genes that only appear variable due to their expression level.
-
-```{r fine_variable_genes_help, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE}
-?FindVariableFeatures
-```
-
-```{r find_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval = F, echo= F}
-# experiment.aggregate <- FindVariableFeatures(
-#   object = experiment.aggregate,
-#   selection.method = "vst")
-# 
-# length(VariableFeatures(experiment.aggregate))
-# 
-# top10 <- head(VariableFeatures(experiment.aggregate), 10)
-# 
-# top10
-# 
-# vfp1 <- VariableFeaturePlot(experiment.aggregate)
-# vfp1 <- LabelPoints(plot = vfp1, points = top10, repel = TRUE)
-# vfp1
-```
-
-However, instead of using the variable genes function, lets instead assign variable genes to a set of "minimally expressed" genes.
-
-```{r our_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval=TRUE}
-dim(experiment.aggregate)
-
-min.value = 1
-min.cells = 10
-num.cells <- Matrix::rowSums(GetAssayData(experiment.aggregate, slot = "count") > min.value)
-genes.use <- names(num.cells[which(num.cells >= min.cells)])
-length(genes.use)
-
-VariableFeatures(experiment.aggregate) <- genes.use
-
-```
-
 ## Finally, lets save the filtered and normalized data
 ```{r save_r, warning=FALSE,error=FALSE,message=FALSE}
 saveRDS(experiment.aggregate, file=part2.rds.save.path)
@@ -342,8 +225,7 @@ to.save.for.report <- c("mito.cutoff",
 												"nFeature.rbc.scatter",
 												"pretty.combo.table",
 												"ridgeplot.postfiltering",
-												"ridgeplot.postfiltering",
-												"cell.cycle.table"
+												"ridgeplot.postfiltering"
                         )
 
 save(list = to.save.for.report, file=part2.file.report.path)

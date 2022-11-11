@@ -1,11 +1,10 @@
 ---
-output:
-  html_document:
-    pandoc_args: './common.yaml'
-params: 
-	config.args: "./config.yaml"
+output: 
+  html_document: 
+pandoc_args: './common.yaml'   
+params:     
+config_args: "configs/config_template.yaml"
 ---
-
 
 # Part 3: PCA and choice in number of PCS
 
@@ -33,15 +32,29 @@ r.obj.loc <- config.args$data$`rds-file-path`
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
+organism <- config.args$project$organism
 batch.correction.method <- config.args$analysis$part3$batch_correction
 
-bc.orig.ident = FALSE
-bc.sctransform = FALSE
+######################################################################
+# Default will be no integration of the samples
+######################################################################
+
+run.normalize.data = TRUE
+run.find.var.genes = TRUE
+run.scale.data = TRUE
+
+run.sctransform = FALSE
+run.scale.orig.ident = FALSE
 
 if (batch.correction.method == "orig.ident"){
-  bc.orig.ident = TRUE
+  run.scale.data = FALSE
+  run.scale.orig.ident = TRUE
 } else if (batch.correction.method == "sctransform"){
-  bc.sctransform = TRUE
+  run.normalize.data = FALSE
+  run.find.var.genes = FALSE
+  run.scale.data = FALSE
+  
+  run.sctransform = TRUE
 }
 
 
@@ -65,20 +78,21 @@ part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
 ### This report was generated on `r formatted.date`
 
 * node.type: `r node.type`
+* batch correction method: `r batch.correction.method`
 
 * starting with rds object at `r part3.rds.open.path`
 * saving rds object to `r part3.rds.save.path`
 * saving file for report at `r part3.file.report.path`
 
 
-```{r get_num_cores_available, echo = FALSE}
+```{r get_n.cores, echo = FALSE}
 if (node.type == "compute"){
   # If using a compute node, then put this in the submission script:
   # export MC_CORES=${SLURM_NTASKS}
-  num.cores.available <- as.numeric(Sys.getenv("SLURM_NTASKS"))
+  n.cores <- as.numeric(Sys.getenv("SLURM_NTASKS"))
 } else {
   library(parallel) 
-  num.cores.available <- detectCores() 
+  n.cores <- detectCores() 
 }
 ```
 
@@ -89,18 +103,161 @@ experiment.aggregate <- readRDS(file=part3.rds.open.path)
 ```
 
 
+## Next we want to normalize the data
+
+After filtering out cells from the dataset, the next step is to normalize the data. By default, we employ a global-scaling normalization method LogNormalize that normalizes the gene expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and then log-transforms the data.
+
+```{r normalize_help, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+?NormalizeData
+```
+
+```{r normalize, warning=FALSE,error=FALSE,message=FALSE, eval=run.normalize.data}
+max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
+options(future.globals.maxSize= max.size)
+
+print(paste0("max.size = ", max.size, ", n.cores = ", n.cores))
+plan("multisession", workers = n.cores) # multithreading
+
+experiment.aggregate <- NormalizeData(
+  object = experiment.aggregate,
+  normalization.method = "LogNormalize",
+  scale.factor = 10000)
+```
+
+### Calculate Cell-Cycle with Seurat
+[Dissecting the multicellular ecosystem of metastatic melanoma by single-cell RNA-seq](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4944528/)
+
+The list of genes comes with Seurat (only for human). We can use biomaRt to convert the human gene symbols to mouse.
+
+
+```{r cellcycle, warning=FALSE,error=FALSE,message=FALSE}
+# Mouse Code
+convertHumanGeneList <- function(x){
+  require("biomaRt")
+  human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://dec2021.archive.ensembl.org/") 
+  mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
+
+  genes = getLDS(attributes = c("hgnc_symbol"), filters = "hgnc_symbol", values = x, mart = human, attributesL = c("mgi_symbol"), martL = mouse, uniqueRows=T)
+
+  humanx <- unique(genes[, 2])
+
+  # Print the first 6 genes found to the screen
+  print(head(humanx))
+  return(humanx)
+}
+
+if (organism == "mouse"){
+  m.s.genes <- convertHumanGeneList(cc.genes.updated.2019$s.genes)
+  m.g2m.genes <- convertHumanGeneList(cc.genes.updated.2019$g2m.genes)
+
+  # Create our Seurat object and complete the initialization steps
+  experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = m.s.genes, g2m.features = m.g2m.genes, set.ident = TRUE)
+} else if (organism == "human"){
+  # Human Code
+  s.genes <- (cc.genes$s.genes)
+  g2m.genes <- (cc.genes$g2m.genes)
+  
+  # Create our Seurat object and complete the initialization steps
+  experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
+}
+```
+
+#### Table of cell cycle (seurate)
+
+```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE}
+cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
+
+cell.cycle.table
+```
+
+#### Fixing the defualt "Ident" in Seurat
+
+```{r update_ident, warning=FALSE,error=FALSE,message=FALSE}
+table(Idents(experiment.aggregate))
+## So lets change it back to samplename
+Idents(experiment.aggregate) <- "orig.ident"
+table(Idents(experiment.aggregate))
+```
+
+
+## Identify variable genes
+
+The function FindVariableFeatures identifies the most highly variable genes (default 2000 genes) by fitting a line to the relationship of log(variance) and log(mean) using loess smoothing, uses this information to standardize the data, then calculates the variance of the standardized data.  This helps avoid selecting genes that only appear variable due to their expression level.
+
+```{r fine_variable_genes_help, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE}
+?FindVariableFeatures
+```
+
+```{r find_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval = F, echo= F}
+# experiment.aggregate <- FindVariableFeatures(
+#   object = experiment.aggregate,
+#   selection.method = "vst")
+# 
+# length(VariableFeatures(experiment.aggregate))
+# 
+# top10 <- head(VariableFeatures(experiment.aggregate), 10)
+# 
+# top10
+# 
+# vfp1 <- VariableFeaturePlot(experiment.aggregate)
+# vfp1 <- LabelPoints(plot = vfp1, points = top10, repel = TRUE)
+# vfp1
+```
+
+However, instead of using the variable genes function, lets instead assign variable genes to a set of "minimally expressed" genes.
+
+```{r our_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval=run.find.var.genes}
+dim(experiment.aggregate)
+
+min.value = 1
+min.cells = 10
+num.cells <- Matrix::rowSums(GetAssayData(experiment.aggregate, slot = "count") > min.value)
+genes.use <- names(num.cells[which(num.cells >= min.cells)])
+length(genes.use)
+
+VariableFeatures(experiment.aggregate) <- genes.use
+
+```
+
+
 ### Scale Data
 
 ScaleData - Scales and centers genes in the dataset. If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered unless otherwise specified. Here we regress out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
-```{r scale_data, warning=FALSE,error=FALSE,message=FALSE}
+```{r scale_data, warning=FALSE,error=FALSE,message=FALSE, eval = run.scale.data}
 max.size <- (as.numeric(object.size(experiment.aggregate)) * 3.0)
 options(future.globals.maxSize= max.size)
 
-plan("multisession", workers = num.cores.available) # multithreading
+plan("multisession", workers = n.cores) # multithreading
 experiment.aggregate <- ScaleData(
   object = experiment.aggregate,
   vars.to.regress = c("S.Score", "G2M.Score", "percent.mito", "nFeature_RNA"))
+```
+
+
+```{r sample_integration, warning=FALSE,error=FALSE,message=FALSE, eval = run.sctransform, echo = run.sctransform}
+max.size <- (as.numeric(object.size(experiment.aggregate)) * 3.0)
+options(future.globals.maxSize= max.size)
+
+if (node.type == "analytics"){
+  plan("multisession", workers = n.cores) # multithreading
+}
+
+seurat.obj.list <- SplitObject(experiment.aggregate, split.by = "orig.ident")
+
+for (i in 1:length(seurat.obj.list)) {
+    seurat.obj.list[[i]] <- SCTransform(seurat.obj.list[[i]], verbose = FALSE)
+}
+
+experiment.aggregate.features <- SelectIntegrationFeatures(object.list = seurat.obj.list, nfeatures = 3000)
+
+seurat.obj.list <- PrepSCTIntegration(object.list = seurat.obj.list, anchor.features = experiment.aggregate.features, verbose = FALSE)
+
+experiment.aggregate.anchors <- FindIntegrationAnchors(object.list = seurat.obj.list, normalization.method = "SCT", anchor.features = experiment.aggregate.features, verbose = FALSE)
+
+experiment.aggregate <- IntegrateData(anchorset = experiment.aggregate.anchors, normalization.method = "SCT", verbose = FALSE)
+
+
 ```
 
 ## Dimensionality reduction with PCA
