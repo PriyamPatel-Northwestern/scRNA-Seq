@@ -1,11 +1,10 @@
 ---
-output:
-  html_document:
-    pandoc_args: './common.yaml'
-params: 
-	config.args: "./config.yaml"
+output: 
+  html_document: 
+pandoc_args: './common.yaml'   
+params:     
+config_args: "configs/config_template.yaml"
 ---
-
 
 # Part 3: PCA and choice in number of PCS
 
@@ -33,6 +32,7 @@ r.obj.loc <- config.args$data$`rds-file-path`
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
+organism <- config.args$project$organism
 batch.correction.method <- config.args$analysis$part3$batch_correction
 
 ######################################################################
@@ -78,6 +78,7 @@ part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
 ### This report was generated on `r formatted.date`
 
 * node.type: `r node.type`
+* batch correction method: `r batch.correction.method`
 
 * starting with rds object at `r part3.rds.open.path`
 * saving rds object to `r part3.rds.save.path`
