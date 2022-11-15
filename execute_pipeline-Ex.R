@@ -1,38 +1,31 @@
+#!/usr/bin/env Rscript
 library(rmarkdown)
 
+args = commandArgs(trailingOnly=TRUE)
+# test if there is at least one argument: if not, return an error
+if (length(args)==0) {
+  stop("At least one argument must be supplied (report number)", call.=FALSE)
+} else if (length(args)==1) {
+  # default output file
+  args[2] = ""
+}
 
-suffix="filename_suffix"
-
-config.file="config.yaml"
-
-part1.output=paste0("reports/part1_", suffix, "_output.html")
-part1.template.filename="scRNA_template_PART1.Rmd"
-
-part2.output=paste0("reports/part2_", suffix, "_output.html")
-part2.template.filename="scRNA_template_PART2.Rmd"
-
-part3.output=paste0("reports/part3_", suffix, "_output.html")
-part3.template.filename="scRNA_template_PART3.Rmd"
-
-part4.output=paste0("reports/part4_", suffix, "_output.html")
-part4.template.filename="scRNA_template_PART4.Rmd"
-
-part5.output=paste0("reports/part5_", suffix, "_output.html")
-part5.template.filename="scRNA_template_PART5.Rmd"
+# Call this script with run_templates.sh and pass it your arguments. The args below
+# are just an example. 
+user.report.num=args[1]
+user.suffix=args[2]
 
 
-render_report = function(config_file, output_filename, template_filename) {
-  rmarkdown::render(
-    template_filename, params = list(
-      config.args = config_file
-    ),
-    output_file = output_filename
-  )
+render_report = function(suffix, report.num){
+        config.file=paste0("config",  suffix, ".yaml")
+        template.filename=paste0("scRNA_template_PART", report.num, ".Rmd")
+        output.filename=paste0("report_part", report.num, suffix, "_output.html")
+
+        rmarkdown::render(template.filename,
+                          params = list( config.args = config.file),
+                          output_file = output.filename )
+
 }
 
 
-render_report(config.file, part1.output, part1.template.filename)
-render_report(config.file, part2.output, part2.template.filename)
-render_report(config.file, part3.output, part3.template.filename)
-render_report(config.file, part4.output, part4.template.filename)
-render_report(config.file, part5.output, part5.template.filename)
+render_report(user.suffix, user.report.num)

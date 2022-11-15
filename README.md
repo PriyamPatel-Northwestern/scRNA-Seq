@@ -12,6 +12,10 @@ Once you have completed scRNA_template_PART5.Rmd and you are satisfied with the 
 the QC and clustering reports for the users. These run automatically based off of your config.yaml. Send
 the QC and clustering html reports to the users.
 
+By default, if you run the script from the command line, or use the 'knit' button in RMarkdown, the script
+will use ./config.yaml as the config file. To pass it an alternate config file at the command line check out
+execute_pipeline.R
+
 
 
 ### To run on quest

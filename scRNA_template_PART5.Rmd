@@ -3,7 +3,7 @@ output:
   html_document:
 pandoc_args: './common.yaml'
 params:
-config_args: "configs/config_template.yaml"
+config_args: "./config.yaml"
 ---
 
 # Part 5: Marker genes

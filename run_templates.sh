@@ -18,10 +18,16 @@ module load geos/3.8.1
 module load hdf5/1.8.19-serial
 module load pandoc/2.2.1
 
+number=$1
+batch=$2
+
+echo -n  "Running pipeline with arguments report number = ${number}, batch control method = ${batch}, at "
+date
+
 SECONDS=0
 
-Rscript execute_pipeline-Ex.R
+# Rscript ${script}
+Rscript execute_pipeline-tissue.R ${number} ${batch}
 
 duration=$SECONDS
 printf "\nProcessed in %.2f minutes\n" $(($duration / 60))
-
