@@ -399,32 +399,30 @@ slotNames(experiment.aggregate)
 <!-- head(experiment.aggregate[[]]) -->
 <!-- ``` -->
 
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
+<br/>
 
-<!-- ## Some basic QA/QC of the metadata, print tables of the 5% quantiles. -->
+## Some basic QA/QC of the metadata, print tables of the 10% quantiles.
 
-<!-- Show 5% quantiles for number of genes per cell per sample -->
-<!-- ```{r quantiles_1, warning=FALSE,error=FALSE,message=FALSE} -->
-<!-- kable(do.call("cbind", tapply(experiment.aggregate$nFeature_RNA,  -->
-<!--                       Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), -->
-<!--       caption = "5% Quantiles of Genes/Cell by Sample") %>% kable_styling() -->
-<!-- ``` -->
+Show 10% quantiles for number of genes per cell per sample
+```{r quantiles_1, warning=FALSE,error=FALSE,message=FALSE}
+kable(do.call("cbind", tapply(experiment.aggregate$nFeature_RNA,
+                      Idents(experiment.aggregate),quantile,probs=seq(0,1,0.1))),
+      caption = "10% Quantiles of Genes/Cell by Sample") %>% kable_styling()
+```
 
-<!-- Show 5% quantiles for number of UMI per cell per sample -->
-<!-- ```{r quantiles_2, warning=FALSE,error=FALSE,message=FALSE} -->
-<!-- kable(do.call("cbind", tapply(experiment.aggregate$nCount_RNA,  -->
-<!--                                       Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), -->
-<!--       caption = "5% Quantiles of UMI/Cell by Sample") %>% kable_styling() -->
-<!-- ``` -->
+Show 10% quantiles for number of UMI per cell per sample
+```{r quantiles_2, warning=FALSE,error=FALSE,message=FALSE}
+kable(do.call("cbind", tapply(experiment.aggregate$nCount_RNA,
+                                      Idents(experiment.aggregate),quantile,probs=seq(0,1,0.1))),
+      caption = "10% Quantiles of UMI/Cell by Sample") %>% kable_styling()
+```
 
-<!-- Show 5% quantiles for number of mitochondrial percentage per cell per sample -->
+Show 10% quantiles for number of mitochondrial percentage per cell per sample
 
-<!-- ```{r quantiles_3, warning=FALSE,error=FALSE,message=FALSE} -->
-<!-- kable(round(do.call("cbind", tapply(experiment.aggregate$percent.mito, Idents(experiment.aggregate),quantile,probs=seq(0,1,0.05))), digits = 3), -->
-<!--       caption = "5% Quantiles of Percent Mitochondria by Sample") %>% kable_styling() -->
-<!-- ``` -->
+```{r quantiles_3, warning=FALSE,error=FALSE,message=FALSE}
+kable(round(do.call("cbind", tapply(experiment.aggregate$percent.mito, Idents(experiment.aggregate),quantile,probs=seq(0,1,0.1))), digits = 3),
+      caption = "10% Quantiles of Percent Mitochondria by Sample") %>% kable_styling()
+```
 
 <br/>
 <br/>

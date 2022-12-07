@@ -47,7 +47,7 @@ run.sctransform = FALSE
 
 regression.vars <- c("S.Score", "G2M.Score", "percent.mito", "nFeature_RNA")
 
-if (batch.correction.method %in% c("orig", "orig_ident", "orig.ident"){
+if (batch.correction.method %in% c("orig", "orig_ident", "orig.ident")){
   append(regression.vars, "orig.ident")
 } else if (batch.correction.method == "sctransform"){
   run.normalize.data = FALSE
