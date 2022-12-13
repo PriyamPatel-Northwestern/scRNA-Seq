@@ -1,9 +1,9 @@
 ---
-output: 
-  html_document: 
-pandoc_args: './common.yaml'   
-params:     
-config_args: "./config.yaml"
+output:
+  html_document:
+    pandoc_args: './common.yaml'
+params:
+  config.args: "./config.yaml"
 ---
 
 # Part 3: PCA and choice in number of PCS
@@ -13,7 +13,8 @@ config_args: "./config.yaml"
 library(Seurat)
 library(ggplot2)
 library(kableExtra)
-library(future)
+# library(future)
+# library(doMC)
 library(dplyr)
 library(yaml)
 ```
@@ -42,6 +43,7 @@ batch.correction.method <- config.args$analysis$part3$batch_correction
 run.normalize.data = TRUE
 run.find.var.genes = TRUE
 run.scale.data = TRUE
+run.integrate.data = TRUE
 
 run.sctransform = FALSE
 
@@ -49,12 +51,12 @@ regression.vars <- c("S.Score", "G2M.Score", "percent.mito", "nFeature_RNA")
 
 if (batch.correction.method %in% c("orig", "orig_ident", "orig.ident")){
   append(regression.vars, "orig.ident")
-} else if (batch.correction.method == "sctransform"){
-  run.normalize.data = FALSE
-  run.find.var.genes = FALSE
-  run.scale.data = FALSE
-  
-  run.sctransform = TRUE
+# } else if (batch.correction.method == "sctransform"){
+#   run.normalize.data = FALSE
+#   run.find.var.genes = FALSE
+#   run.scale.data = FALSE
+#   
+#   run.sctransform = TRUE
 }
 
 
@@ -89,10 +91,10 @@ part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
 if (node.type == "compute"){
   # If using a compute node, then put this in the submission script:
   # export MC_CORES=${SLURM_NTASKS}
-  n.cores <- as.numeric(Sys.getenv("SLURM_NTASKS"))
+  n.cores <- as.numeric(Sys.getenv("SLURM_NTASKS")) - 1
 } else {
   library(parallel) 
-  n.cores <- detectCores() 
+  n.cores <- detectCores() - 1
 }
 ```
 
@@ -111,23 +113,45 @@ After filtering out cells from the dataset, the next step is to normalize the da
 ?NormalizeData
 ```
 
-```{r normalize, warning=FALSE,error=FALSE,message=FALSE, eval=run.normalize.data}
-max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
-options(future.globals.maxSize= max.size)
+### Scale Data and Find Variable Genes
 
-print(paste0("max.size = ", max.size, ", n.cores = ", n.cores))
-plan("multisession", workers = n.cores) # multithreading
+The function FindVariableFeatures identifies the most highly variable genes (default 2000 genes) by fitting a line to the relationship of log(variance) and log(mean) using loess smoothing, uses this information to standardize the data, then calculates the variance of the standardized data.  This helps avoid selecting genes that only appear variable due to their expression level.
 
-experiment.aggregate <- NormalizeData(
-  object = experiment.aggregate,
-  normalization.method = "LogNormalize",
-  scale.factor = 10000)
+However, instead of using the variable genes function, lets instead assign variable genes to a set of "minimally expressed" genes.
+
+```{r normalize_find_var_genes, warning=FALSE,error=FALSE,message=FALSE}
+# split the dataset into a list of seurat objects
+experiment.split <- SplitObject(experiment.aggregate, split.by = "orig.ident")
+
+# normalize and identify variable features for each dataset independently
+experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.object) { 
+  single.seurat.object <- NormalizeData(single.seurat.object) 
+  min.value = 1  
+  min.cells = 10  
+  num.cells <- Matrix::rowSums(GetAssayData(single.seurat.object, slot = "count") > min.value)  
+  genes.use <- names(num.cells[which(num.cells >= min.cells)])  
+  length(genes.use)   
+  VariableFeatures(single.seurat.object) <- genes.use 
+  single.seurat.object
+})
 ```
+
+```{r sample_integration, warning=FALSE,error=FALSE,message=FALSE, eval = run.integrate.data, echo = run.integrate.data}
+
+features <- SelectIntegrationFeatures(object.list = experiment.split)
+anchors <- FindIntegrationAnchors(object.list = experiment.split, anchor.features = features)
+
+experiment.aggregate <- IntegrateData(anchorset = anchors)
+
+```
+
 
 ### Calculate Cell-Cycle with Seurat
 [Dissecting the multicellular ecosystem of metastatic melanoma by single-cell RNA-seq](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4944528/)
 
 The list of genes comes with Seurat (only for human). We can use biomaRt to convert the human gene symbols to mouse.
+
+
 
 
 ```{r cellcycle, warning=FALSE,error=FALSE,message=FALSE}
@@ -156,7 +180,7 @@ if (organism == "mouse"){
   # Human Code
   s.genes <- (cc.genes$s.genes)
   g2m.genes <- (cc.genes$g2m.genes)
-  
+
   # Create our Seurat object and complete the initialization steps
   experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 }
@@ -180,85 +204,17 @@ table(Idents(experiment.aggregate))
 ```
 
 
-## Identify variable genes
-
-The function FindVariableFeatures identifies the most highly variable genes (default 2000 genes) by fitting a line to the relationship of log(variance) and log(mean) using loess smoothing, uses this information to standardize the data, then calculates the variance of the standardized data.  This helps avoid selecting genes that only appear variable due to their expression level.
-
-```{r fine_variable_genes_help, warning=FALSE,error=FALSE, message=FALSE, eval=FALSE}
-?FindVariableFeatures
-```
-
-```{r find_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval = F, echo= F}
-# experiment.aggregate <- FindVariableFeatures(
-#   object = experiment.aggregate,
-#   selection.method = "vst")
-# 
-# length(VariableFeatures(experiment.aggregate))
-# 
-# top10 <- head(VariableFeatures(experiment.aggregate), 10)
-# 
-# top10
-# 
-# vfp1 <- VariableFeaturePlot(experiment.aggregate)
-# vfp1 <- LabelPoints(plot = vfp1, points = top10, repel = TRUE)
-# vfp1
-```
-
-However, instead of using the variable genes function, lets instead assign variable genes to a set of "minimally expressed" genes.
-
-```{r our_variable_genes, warning=FALSE,error=FALSE,message=FALSE, eval=run.find.var.genes}
-dim(experiment.aggregate)
-
-min.value = 1
-min.cells = 10
-num.cells <- Matrix::rowSums(GetAssayData(experiment.aggregate, slot = "count") > min.value)
-genes.use <- names(num.cells[which(num.cells >= min.cells)])
-length(genes.use)
-
-VariableFeatures(experiment.aggregate) <- genes.use
-
-```
-
-
 ### Scale Data
 
 ScaleData - Scales and centers genes in the dataset. If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered unless otherwise specified. Here we regress out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
+
 ```{r scale_data, warning=FALSE,error=FALSE,message=FALSE, eval = run.scale.data}
-max.size <- (as.numeric(object.size(experiment.aggregate)) * 3.0)
-options(future.globals.maxSize= max.size)
 
-plan("multisession", workers = n.cores) # multithreading
-experiment.aggregate <- ScaleData(
-  object = experiment.aggregate,
-  vars.to.regress = regression.vars)
+experiment.aggregate <- ScaleData(experiment.aggregate, 
+                                  vars.to.regress = regression.vars)
 ```
 
-
-```{r sample_integration, warning=FALSE,error=FALSE,message=FALSE, eval = run.sctransform, echo = run.sctransform}
-max.size <- (as.numeric(object.size(experiment.aggregate)) * 3.0)
-options(future.globals.maxSize= max.size)
-
-if (node.type == "analytics"){
-  plan("multisession", workers = n.cores) # multithreading
-}
-
-seurat.obj.list <- SplitObject(experiment.aggregate, split.by = "orig.ident")
-
-for (i in 1:length(seurat.obj.list)) {
-    seurat.obj.list[[i]] <- SCTransform(seurat.obj.list[[i]], verbose = FALSE)
-}
-
-experiment.aggregate.features <- SelectIntegrationFeatures(object.list = seurat.obj.list, nfeatures = 3000)
-
-seurat.obj.list <- PrepSCTIntegration(object.list = seurat.obj.list, anchor.features = experiment.aggregate.features, verbose = FALSE)
-
-experiment.aggregate.anchors <- FindIntegrationAnchors(object.list = seurat.obj.list, normalization.method = "SCT", anchor.features = experiment.aggregate.features, verbose = FALSE)
-
-experiment.aggregate <- IntegrateData(anchorset = experiment.aggregate.anchors, normalization.method = "SCT", verbose = FALSE)
-
-
-```
 
 ## Dimensionality reduction with PCA
 
@@ -310,12 +266,6 @@ ElbowPlot plots the standard deviations (or approximate singular values if runni
 elbow.plot <- ElbowPlot(experiment.aggregate, ndims = 100)
 
 elbow.plot
-```
-
-
-```{r cell_cycle_table, warning=FALSE, error=FALSE, message=FALSE}
-cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
-
 ```
 ## Finally, lets save the filtered and normalized data
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}

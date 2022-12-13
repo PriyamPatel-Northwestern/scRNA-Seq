@@ -1,9 +1,9 @@
 ---
 output:
   html_document:
-    pandoc_args: './common.yaml'
-params: 
-	config.args: "./config.yaml"
+pandoc_args: './common.yaml'
+params:
+config_args: "./config.yaml"
 ---
 
 ```{r load_libraries, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
@@ -22,7 +22,8 @@ todays.date <- Sys.Date()
 formatted.date <- format(todays.date, format="%B %d %Y")
 
 # Import the config file
-config.args <- read_yaml(params$config.args)
+# config.args <- read_yaml(params$config.args)
+config.args <- read_yaml("/home/bwp9287/pipelines/scRNA-Seq/config_integrated.yaml")
 
 # set project variables
 analyst.name <- config.args$project$`analyst-name`
