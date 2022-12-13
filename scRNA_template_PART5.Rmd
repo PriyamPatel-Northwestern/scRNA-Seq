@@ -194,12 +194,6 @@ Seurat can help you find markers that define clusters via differential expressio
 ### FindAllMarkers can be used to automate the process across all genes.
 
 ```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE}
-# DefaultAssay(experiment.aggregate) <- 'RNA'
-max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
-options(future.globals.maxSize= max.size)
-
-print(paste0("max.size = ", max.size, ", num.cores.available = ", num.cores.available))
-plan("multisession", workers = num.cores.available) # multithreading
 
 markers_all <- FindAllMarkers(
     object = experiment.aggregate,
