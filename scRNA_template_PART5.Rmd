@@ -133,7 +133,10 @@ clusters.to.sample.table
 
 ### Plot uMap coloring by the slot 'ident' (default).
 ```{r plot_umap, warning=FALSE,error=FALSE,message=FALSE}
-cluster.umap <- DimPlot(object = experiment.aggregate, pt.size=0.5, reduction = "umap", label = T)
+cluster.umap <- DimPlot(object = experiment.aggregate, 
+                        pt.size=0.5, 
+                        reduction = "umap", 
+                        label = T)
 
 cluster.umap
 ```

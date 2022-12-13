@@ -1,9 +1,9 @@
 ---
 output:
   html_document:
-pandoc_args: './common.yaml'
+    pandoc_args: './common.yaml'
 params:
-config_args: "./config.yaml"
+  config.args: "./config.yaml"
 ---
 
 # Part 4: clustering
@@ -112,15 +112,9 @@ This implementation generates clusters at a range of different resolutions. You 
 ```{r find_neighbors, warning=FALSE,error=FALSE,message=FALSE}
 experiment.aggregate <- FindNeighbors(experiment.aggregate, reduction="pca", dims = use.pcs)
 
-max.size <- (as.numeric(object.size(experiment.aggregate)) * 1.2)
-options(future.globals.maxSize= max.size)
-
-print(paste0("max.size = ", max.size, ", num.cores.available = ", num.cores.available))
-plan("multisession", workers = num.cores.available) # multithreading
-
 experiment.aggregate <- FindClusters(
     object = experiment.aggregate,
-    resolution = seq(0.25,4,0.5),
+    resolution = seq(0.10,0.8,0.1),
     # resolution = 0.25,
     verbose = FALSE
 )

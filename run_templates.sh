@@ -7,8 +7,8 @@
 #SBATCH -o "%x.o%j"
 #SBATCH -N 1                 ## number of nodes
 #SBATCH -n 1                 ## number of cores
-#SBATCH -t 5:00:00          ## walltime
-#SBATCH --mem=20G
+#SBATCH -t 48:00:00          ## walltime
+#SBATCH --mem=80G
 
 export MC_CORES=${SLURM_NTASKS}
 
@@ -27,7 +27,7 @@ date
 SECONDS=0
 
 # Rscript ${script}
-Rscript execute_pipeline-tissue.R ${number} ${batch}
+Rscript execute_pipeline-Ex.R ${number} ${batch}
 
 duration=$SECONDS
 printf "\nProcessed in %.2f minutes\n" $(($duration / 60))

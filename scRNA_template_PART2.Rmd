@@ -2,8 +2,8 @@
 output: 
   html_document: 
 pandoc_args: './common.yaml'   
-params:     
-config_args: "./config.yaml"
+params: 
+	config_args: "./config.yaml"
 ---
 
 # Part 2: Some QA/QC, filtering, normalization, and assigning variable genes
@@ -25,6 +25,7 @@ todays.date <- Sys.Date()
 formatted.date <- format(todays.date, format="%B %d %Y")
 
 config.args <- read_yaml(params$config.args)
+
 ```
 
 ```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
