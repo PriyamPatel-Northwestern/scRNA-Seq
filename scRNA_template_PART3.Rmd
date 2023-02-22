@@ -3,7 +3,7 @@ output:
   html_document:
     pandoc_args: './common.yaml'
 params:
-  config.args: "./config.yaml"
+  config.args: "./config_sctransform_single_sample.yaml"
 ---
 
 # Part 3: PCA and choice in number of PCS
@@ -37,13 +37,26 @@ organism <- config.args$project$organism
 batch.correction.method <- config.args$analysis$part3$batch_correction
 
 ######################################################################
-# Default will be no integration of the samples
+# Default will be no integration of the samples if there is only 1
 ######################################################################
+ids <- config.args$project$samples # sample names, need to match the folders containing the h5 files
+ids <- gsub("-", "", ids)
+ids <- gsub("\"", "", ids)
+ids <- strsplit(ids, "[[:space:]]")
+ids <- unlist(ids)
+
+num.samples <- length(ids)
+
 
 run.normalize.data = TRUE
 run.find.var.genes = TRUE
 run.scale.data = TRUE
-run.integrate.data = TRUE
+
+if (num.samples > 1){
+  run.integrate.data = TRUE
+} else {
+  run.integrate.data = FALSE
+}
 
 run.sctransform = FALSE
 
@@ -51,15 +64,15 @@ regression.vars <- c("S.Score", "G2M.Score", "percent.mito", "nFeature_RNA")
 
 if (batch.correction.method %in% c("orig", "orig_ident", "orig.ident")){
   append(regression.vars, "orig.ident")
-# } else if (batch.correction.method == "sctransform"){
-#   run.normalize.data = FALSE
-#   run.find.var.genes = FALSE
-#   run.scale.data = FALSE
-#   
-#   run.sctransform = TRUE
+} else if (batch.correction.method == "sctransform"){
+  run.normalize.data = FALSE
+  run.find.var.genes = FALSE
+  run.scale.data = FALSE
+
+  run.sctransform = TRUE
 }
 
-
+# generate list of ids for use in importing data
 part2.suffix <- config.args$analysis$part2$part2_suffix
 part3.suffix <- config.args$analysis$part3$part3_suffix
 
@@ -125,24 +138,54 @@ experiment.split <- SplitObject(experiment.aggregate, split.by = "orig.ident")
 
 # normalize and identify variable features for each dataset independently
 experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.object) { 
-  single.seurat.object <- NormalizeData(single.seurat.object) 
-  min.value = 1  
-  min.cells = 10  
-  num.cells <- Matrix::rowSums(GetAssayData(single.seurat.object, slot = "count") > min.value)  
-  genes.use <- names(num.cells[which(num.cells >= min.cells)])  
-  length(genes.use)   
-  VariableFeatures(single.seurat.object) <- genes.use 
-  single.seurat.object
+  if (!run.sctransform){
+    print(paste0("Running normalize and scaledata on ", unique(single.seurat.object$orig.ident)))
+    single.seurat.object <- NormalizeData(single.seurat.object) 
+    min.value = 1  
+    min.cells = 10  
+    num.cells <- Matrix::rowSums(GetAssayData(single.seurat.object, slot = "count") > min.value)  
+    genes.use <- names(num.cells[which(num.cells >= min.cells)])  
+    length(genes.use)   
+    VariableFeatures(single.seurat.object) <- genes.use 
+    single.seurat.object <- ScaleData(single.seurat.object, vars.to.regress = regression.vars)
+    single.seurat.object
+  } else {
+    single.seurat.object <- experiment.split$BM_WT
+    print(paste0("Running sctransform on ", unique(single.seurat.object$orig.ident)))
+    single.seurat.object <- SCTransform(single.seurat.object, 
+                                        vars.to.regress = "percent.mito")
+    
+    if (num.samples == 1){
+      print("Throwing single.seurat.object into experiment.aggregate")
+      experiment.aggregate <- single.seurat.object
+    } else {  
+      single.seurat.object
+    }
+  }
 })
 ```
 
+
 ```{r sample_integration, warning=FALSE,error=FALSE,message=FALSE, eval = run.integrate.data, echo = run.integrate.data}
 
-features <- SelectIntegrationFeatures(object.list = experiment.split)
-anchors <- FindIntegrationAnchors(object.list = experiment.split, anchor.features = features)
+if (run.sctransform){
+  print("running integration on sctransform samples")
+  features <- SelectIntegrationFeatures(object.list = experiment.split, nfeatures = 3000)
+  experiment.split <- PrepSCTIntegration(object.list = experiment.split, anchor.features = features)
 
-experiment.aggregate <- IntegrateData(anchorset = anchors)
+  immune.anchors <- FindIntegrationAnchors(object.list = experiment.split, 
+                                           normalization.method = "SCT", 
+                                           anchor.features = features)
+  
+  experiment.aggregate <- IntegrateData(anchorset = immune.anchors, 
+                                       normalization.method = "SCT")
+} else {
+  print("Running integration on normalized and scaled data (NOT sctransform)")
+  features <- SelectIntegrationFeatures(object.list = experiment.split)
+  anchors <- FindIntegrationAnchors(object.list = experiment.split, anchor.features = features)
 
+  experiment.aggregate <- IntegrateData(anchorset = anchors)
+}
 ```
 
 
@@ -158,8 +201,8 @@ The list of genes comes with Seurat (only for human). We can use biomaRt to conv
 # Mouse Code
 convertHumanGeneList <- function(x){
   require("biomaRt")
-  human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://dec2021.archive.ensembl.org/") 
-  mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
+  human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://apr2022.archive.ensembl.org/") 
+  mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl", host = "https://apr2022.archive.ensembl.org/")
 
   genes = getLDS(attributes = c("hgnc_symbol"), filters = "hgnc_symbol", values = x, mart = human, attributesL = c("mgi_symbol"), martL = mouse, uniqueRows=T)
 
