@@ -150,7 +150,6 @@ experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.ob
     single.seurat.object <- ScaleData(single.seurat.object, vars.to.regress = regression.vars)
     single.seurat.object
   } else {
-    single.seurat.object <- experiment.split$BM_WT
     print(paste0("Running sctransform on ", unique(single.seurat.object$orig.ident)))
     single.seurat.object <- SCTransform(single.seurat.object, 
                                         vars.to.regress = "percent.mito")
