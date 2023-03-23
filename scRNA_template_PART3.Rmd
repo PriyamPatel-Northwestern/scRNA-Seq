@@ -233,7 +233,6 @@ if (organism == "mouse"){
   s.genes <- (cc.genes$s.genes)
   g2m.genes <- (cc.genes$g2m.genes)
 
-  save(list = c("s.genes", "g2m.genes"), file = "human_cell_cycle_genes.RData")
   # Create our Seurat object and complete the initialization steps
   experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 }
