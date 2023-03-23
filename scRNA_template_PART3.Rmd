@@ -48,8 +48,6 @@ ids <- unlist(ids)
 num.samples <- length(ids)
 
 
-run.normalize.data = TRUE
-run.find.var.genes = TRUE
 run.scale.data = TRUE
 
 if (num.samples > 1){
@@ -60,15 +58,12 @@ if (num.samples > 1){
 
 run.sctransform = FALSE
 
-regression.vars <- c("S.Score", "G2M.Score", "percent.mito", "nFeature_RNA")
+regression.vars.1 <- c("percent.mito", "nFeature_RNA")
+cell.cycle.vars <- c("S.Score", "G2M.Score") 
 
 if (batch.correction.method %in% c("orig", "orig_ident", "orig.ident")){
   append(regression.vars, "orig.ident")
 } else if (batch.correction.method == "sctransform"){
-  run.normalize.data = FALSE
-  run.find.var.genes = FALSE
-  run.scale.data = FALSE
-
   run.sctransform = TRUE
 }
 
@@ -147,12 +142,12 @@ experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.ob
     genes.use <- names(num.cells[which(num.cells >= min.cells)])  
     length(genes.use)   
     VariableFeatures(single.seurat.object) <- genes.use 
-    single.seurat.object <- ScaleData(single.seurat.object, vars.to.regress = regression.vars)
+    single.seurat.object <- ScaleData(single.seurat.object, vars.to.regress = regression.vars.1)
     single.seurat.object
   } else {
     print(paste0("Running sctransform on ", unique(single.seurat.object$orig.ident)))
     single.seurat.object <- SCTransform(single.seurat.object, 
-                                        vars.to.regress = "percent.mito")
+                                        vars.to.regress = regression.vars.1)
     
     if (num.samples == 1){
       print("Throwing single.seurat.object into experiment.aggregate")
@@ -196,7 +191,7 @@ The list of genes comes with Seurat (only for human). We can use biomaRt to conv
 
 
 
-```{r cellcycle, warning=FALSE,error=FALSE,message=FALSE}
+```{r cellcycle, warning=FALSE,error=FALSE}
 # Mouse Code
 convertHumanGeneList <- function(x){
   require("biomaRt")
@@ -213,16 +208,32 @@ convertHumanGeneList <- function(x){
 }
 
 if (organism == "mouse"){
-  m.s.genes <- convertHumanGeneList(cc.genes.updated.2019$s.genes)
-  m.g2m.genes <- convertHumanGeneList(cc.genes.updated.2019$g2m.genes)
+  tryCatch(
+    {
+      m.s.genes <- convertHumanGeneList(cc.genes.updated.2019$s.genes)  
+      m.g2m.genes <- convertHumanGeneList(cc.genes.updated.2019$g2m.genes)
+    }, error=function(cond) {
+            message("Error in Biomart lookup for converting cell cycle genes.")
+            message("Using the saved versions instead.")
+            message("Here's the original error message:")
+            message(cond)
+            message("")
+    })
+  
+  # I tried loading this in the exception handling above, but it wasn't working
+  if (!exists("m.s.genes")){
+    load(file="mouse_cell_cycle_genes.RData")
+  }
 
   # Create our Seurat object and complete the initialization steps
   experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = m.s.genes, g2m.features = m.g2m.genes, set.ident = TRUE)
+  
 } else if (organism == "human"){
   # Human Code
   s.genes <- (cc.genes$s.genes)
   g2m.genes <- (cc.genes$g2m.genes)
 
+  save(list = c("s.genes", "g2m.genes"), file = "human_cell_cycle_genes.RData")
   # Create our Seurat object and complete the initialization steps
   experiment.aggregate <- CellCycleScoring(experiment.aggregate, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 }
@@ -251,10 +262,11 @@ table(Idents(experiment.aggregate))
 ScaleData - Scales and centers genes in the dataset. If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered unless otherwise specified. Here we regress out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
 
-```{r scale_data, warning=FALSE,error=FALSE,message=FALSE, eval = run.scale.data}
+```{r scale_data_cell_cycle, warning=FALSE,error=FALSE,message=FALSE}
 
 experiment.aggregate <- ScaleData(experiment.aggregate, 
-                                  vars.to.regress = regression.vars)
+                                  vars.to.regress = cell.cycle.vars,
+                                  do.scale = FALSE)
 ```
 
 
