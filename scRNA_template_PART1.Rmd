@@ -153,7 +153,7 @@ d10x.metrics <- lapply(ids, function(sample.name){
         metrics <- read.csv(metrics.path.cleaned, colClasses = "character")  
         } else if (file.exists(metrics.path.raw)) { 
           metrics <- read.csv(metrics.path.raw, colClasses = "character")  
-          } 
+        } 
       }, 
     error=function(cond) { 
       message(paste0("Error loading the sample ", sample.name)) 
@@ -314,18 +314,26 @@ Objects created for:
 
 ```{r load_tenx_data, warning=FALSE,error=FALSE, message=FALSE}
 
-d10x.data <- lapply(ids, function(i){
-  print(i)
+d10x.data <- lapply(ids, function(sample.name){
+  print(paste0("Importing data for ", sample.name)) 
+  
+  if (dir.exists(file.path(dataset.path, sample.name, "outs"))){ 
+    tenx.h5.path <- file.path(dataset.path,sample.name,"outs/raw_feature_bc_matrix.h5")
+    tenx.matrix.path <- file.path(dataset.path,sample.name,"outs/raw_feature_bc_matrix")
+  } else {
+    tenx.h5.path <- file.path(dataset.path,sample.name,"raw_feature_bc_matrix.h5")
+    tenx.matrix.path <- file.path(dataset.path,sample.name,"raw_feature_bc_matrix")
+  }
+
   
   if (import.h5){
-    raw.data.path <- file.path(dataset.path,i,"raw_feature_bc_matrix.h5")
-    d10x <- Read10X_h5(raw.data.path)
+    d10x <- Read10X_h5(tenx.h5.path)
   } else {
-    raw.data.path <- file.path(dataset.path,i,"raw_feature_bc_matrix")
-    d10x <- Read10X(raw.data.path)
+    d10x <- Read10X(tenx.matrix.path)
   }
   
-  colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-")
+  colnames(d10x) <- paste(
+    sapply(strsplit(colnames(d10x),split="-"),'[[',1L),sample.name,sep="-")
   d10x
 })
 names(d10x.data) <- ids
