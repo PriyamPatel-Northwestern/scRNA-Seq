@@ -70,12 +70,22 @@ organism = config.args$project$organism
 # setup the sample names for printing in the inline report
 formatted.samples <- gsub("\"", "", formatted.samples)
 formatted.samples <- gsub("\ ", "  \n ", formatted.samples)
-formatted.samples <- gsub("-", " * ", formatted.samples)
+
+# These two replace the first dash in the file names, which comes from the 
+# formatting of the config file, with '*' for the rmd report
+formatted.samples <- gsub("\ -", " * ", formatted.samples)
+formatted.samples <- gsub("^-", " * ", formatted.samples)
+
 formatted.samples <- paste0(formatted.samples, " <br /> ")
 
 # generate list of ids for use in importing data
 ids <- config.args$project$samples # sample names, need to match the folders containing the h5 files
-ids <- gsub("-", "", ids)
+
+# Use sub instead of gsub in the first call. gsub replaces all, while sub 
+# only replaces the first instance. The first dash is just there as formatting
+# in the config file. This allows for names with dashes in them.
+ids <- sub("^-", "", ids)
+ids <- gsub("\ -", "\ ", ids)
 ids <- gsub("\"", "", ids)
 ids <- strsplit(ids, "[[:space:]]")
 ids <- unlist(ids)
@@ -133,10 +143,23 @@ Part 1 focuses on getting data into R and setting up our initial object.
 <br/>
 
 ```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE}
-d10x.metrics <- lapply(ids, function(i){
-  print(i)
-  metrics.path <- file.path(dataset.path,i,"metrics_summary.csv")
-  metrics <- read.csv(metrics.path, colClasses = "character")
+d10x.metrics <- lapply(ids, function(sample.name){
+  print(sample.name)
+  metrics.path.cleaned <- file.path(dataset.path,sample.name,"metrics_summary.csv")
+  metrics.path.raw <- file.path(dataset.path, sample.name, "outs/metrics_summary.csv") 
+  tryCatch( 
+    {  
+      if(file.exists(metrics.path.cleaned)){     
+        metrics <- read.csv(metrics.path.cleaned, colClasses = "character")  
+        } else if (file.exists(metrics.path.raw)) { 
+          metrics <- read.csv(metrics.path.raw, colClasses = "character")  
+          } 
+      }, 
+    error=function(cond) { 
+      message(paste0("Error loading the sample ", sample.name)) 
+      message("Here's the original error message:")  
+      }
+    )
 })
 experiment.metrics <- do.call("rbind", d10x.metrics)
 rownames(experiment.metrics) <- ids
