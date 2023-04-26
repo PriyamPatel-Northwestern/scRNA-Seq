@@ -7,11 +7,19 @@ params:
 ---
 ```{r import_libraries, warning=FALSE,error=FALSE,message=FALSE}
 # must have Seurat
-library(Seurat)
-library(kableExtra)
-library(ggplot2)
-library(Matrix)
-library(yaml)
+suppressMessages(require(Seurat))
+suppressMessages(require(Matrix))
+suppressMessages(require(kableExtra))
+suppressMessages(require(ggplot2))
+suppressMessages(require(yaml))
+
+if (!require(DoubletFinder)) {
+  install.packages("fields") 
+  remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", 
+                          upgrade = FALSE, 
+                          dependencies = FALSE)
+}
+
 ```
 
 
