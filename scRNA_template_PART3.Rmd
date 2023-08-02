@@ -79,9 +79,9 @@ part3.rds.save.file <- config.args$analysis$part3$part3_rds_save_filename
 part3.rds.save.file <- sub(".RDS", paste0(part3.suffix, ".RDS"), part3.rds.save.file )
 part3.rds.save.path <- file.path(r.obj.loc, part3.rds.save.file)
 
-part3.file.for.report <- config.args$analysis$part3$part3_report_stuff_filename
-part3.file.for.report <- sub(".RData", paste0(part3.suffix, ".RData"), part3.file.for.report )
-part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
+# part3.file.for.report <- config.args$analysis$part3$part3_report_stuff_filename
+# part3.file.for.report <- sub(".RData", paste0(part3.suffix, ".RData"), part3.file.for.report )
+# part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
 
 ```
 
@@ -192,6 +192,8 @@ The list of genes comes with Seurat (only for human). We can use biomaRt to conv
 
 
 ```{r cellcycle, warning=FALSE,error=FALSE}
+# DefaultAssay(experiment.aggregate) <- "RNA" # https://github.com/satijalab/seurat/issues/1717
+
 # Mouse Code
 convertHumanGeneList <- function(x){
   require("biomaRt")
@@ -288,15 +290,31 @@ Visualize PCA loadings
 pca.loadings.1 <- VizDimLoadings(experiment.aggregate, dims = 1, ncol = 1) + theme_minimal(base_size = 8)
 pca.loadings.2 <- VizDimLoadings(experiment.aggregate, dims = 2, ncol = 1) + theme_minimal(base_size = 8)
 
+pca.loadings1.filename <- paste0("part3", part3.suffix, "_pca_loadings1.png")
+pca.loadings2.filename <- paste0("part3", part3.suffix, "_pca_loadings2.png")
+
+pca.loadings.1.path <- file.path(r.obj.loc, pca.loadings1.filename)
+pca.loadings.2.path <- file.path(r.obj.loc, pca.loadings2.filename)
+
 pca.loadings.1
 pca.loadings.2
+
+ggsave(pca.loadings.1.path, 
+       pca.loadings.1)
+
+ggsave(pca.loadings.2.path, 
+       pca.loadings.2)
 ```
 
 Principal components plot
 ```{r plot_pca, warning=FALSE,error=FALSE,message=FALSE}
 pca.plot <- DimPlot(object = experiment.aggregate, reduction = "pca")
 
+pca.plot.filename <- paste0("part3", part3.suffix, "_pca_plot.png")
+pca.plot.path <- file.path(r.obj.loc, pca.plot.filename)
+
 pca.plot
+ggsave(pca.plot.path, pca.plot)
 ```
 
 Draws a heatmap focusing on a principal component. Both cells and genes are sorted by their principal component scores. Allows for nice visualization of sources of heterogeneity in the dataset.
@@ -318,7 +336,13 @@ ElbowPlot plots the standard deviations (or approximate singular values if runni
 ```{r elbow, warning=FALSE,error=FALSE,message=FALSE}
 elbow.plot <- ElbowPlot(experiment.aggregate, ndims = 100)
 
+elbow.plot.filename <- paste0("part3", part3.suffix, "_elbow_plot.png")
+elbow.plot.path <- file.path(r.obj.loc, elbow.plot.filename)
+
 elbow.plot
+
+ggsave(elbow.plot.path,
+       elbow.plot)
 ```
 ## Finally, lets save the filtered and normalized data
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}

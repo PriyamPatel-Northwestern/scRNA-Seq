@@ -16,6 +16,15 @@ library(kableExtra)
 library(dplyr)
 library(future)
 library(yaml)
+
+if (!require(DoubletFinder)) {
+  install.packages("fields") 
+  remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", 
+                          upgrade = FALSE, 
+                          dependencies = FALSE)
+}
+
+
 ```
 
 ```{r prepare_inline_variables, echo = FALSE}
@@ -38,6 +47,13 @@ num.pcs <- config.args$analysis$part4$num_pcs
 
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
+
+batch.correction.method <- config.args$analysis$part3$batch_correction
+run.sctransform = FALSE
+
+if (batch.correction.method == "sctransform"){
+  run.sctransform = TRUE
+}
 
 part3.suffix <- config.args$analysis$part3$part3_suffix
 part4.suffix <- config.args$analysis$part4$part4_suffix
@@ -105,11 +121,12 @@ The FindClusters function implements the neighbor based clustering procedure, an
 
 This implementation generates clusters at a range of different resolutions. You should pick one to do the rest of this rmd sheet, but the investigators can pick a different resolution and you can switch it up easily.
 
-```{r find_neighbors_help, warning=FALSE,error=FALSE,message=FALSE}
+```{r find_neighbors_help, warning=FALSE,error=FALSE,message=FALSE, eval = FALSE}
 ?FindNeighbors
 ```
 
 ```{r find_neighbors, warning=FALSE,error=FALSE,message=FALSE}
+DefaultAssay(experiment.aggregate) <- "integrated"
 experiment.aggregate <- FindNeighbors(experiment.aggregate, reduction="pca", dims = use.pcs)
 
 experiment.aggregate <- FindClusters(
@@ -193,13 +210,113 @@ DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.a
 ```{r tsne_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
 DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "tsne", label = T)
 ```
+```{r doublet_prediction}
+
+# split the dataset into a list of seurat objects
+experiment.split <- SplitObject(experiment.aggregate, split.by = "orig.ident")
+
+# single.seurat.object <- experiment.split[[1]]
+# normalize and identify variable features for each dataset independently
+# experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.object) {   
+#   
+#   ## pK Identification (no ground-truth) --------------------------------------------------------------------------------------- 
+#   sweep.res.list <- paramSweep_v3(single.seurat.object, 
+#                                   PCs = 1:num.pcs, 
+#                                   sct = run.sctransform) 
+#   
+#   sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE) 
+#   bcmvn <- find.pK(sweep.stats) 
+#   
+#   ## pK Identification (ground-truth) ------------------------------------------------------------------------------------------ 
+# #   sweep.res.list <- paramSweep_v3(single.seurat.object, PCs = 1:10, sct = TRUE) 
+# #   gt.calls <- single.seurat.object@meta.data[rownames(sweep.res.list[[1]]), "GT"].   ## GT is a vector containing "Singlet" and "Doublet" calls recorded using sample multiplexing classification and/or in silico geneotyping results 
+# # sweep.stats <- summarizeSweep(sweep.res.list, GT = TRUE, GT.calls = gt.calls)
+# # bcmvn <- find.pK(sweep.stats)
+# 
+# ## Homotypic Doublet Proportion Estimate ------------------------------------------------------------------------------------- 
+#   annotations <- single.seurat.object@meta.data$integrated_snn_res.0.2
+#   homotypic.prop <- modelHomotypic(annotations)           ## ex: annotations <- single.seurat.object@meta.data$ClusteringResults 
+#   nExp_poi <- round(0.075*nrow(single.seurat.object@meta.data))  ## Assuming 7.5% doublet formation rate - tailor for your dataset 
+#   nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+# 
+# ## Run DoubletFinder with varying classification stringenciesG ----------------------------------------------------------------
+#   single.seurat.object <- doubletFinder_v3(single.seurat.object, 
+#                                            PCs = 1:10, 
+#                                            pN = 0.25, 
+#                                            pK = 0.09, 
+#                                            nExp = nExp_poi, 
+#                                            reuse.pANN = FALSE, 
+#                                            sct = run.sctransform)
+#   
+#   single.seurat.object
+#   
+#   
+# # # single.seurat.object <- doubletFinder_v3(single.seurat.object, PCs = 1:10, pN = 0.25, pK = 0.09, nExp = nExp_poi.adj, reuse.pANN = "pANN_0.25_0.09_913", sct = TRUE)
+# # 
+# #   curr.sample.name <- unique(single.seurat.object$orig.ident)
+# #   print(paste0("Sample ", curr.sample.name))
+# #   
+# #   
+# #   nExp <- round(ncol(single.seurat.object) * 0.04)  # expect 4% doublets
+# #   sweep.list <- paramSweep_v3(single.seurat.object, PCs = 1:num.pcs, sct=TRUE)
+# #   sweep.stats <- summarizeSweep(sweep.list, GT=FALSE)
+# # 
+# # 
+# #   single.seurat.object <- doubletFinder_v3(single.seurat.object, 
+# #                                            sct = TRUE, 
+# #                                            sweep.list)
+# #   single.seurat.object
+# 
+# })
+
+sweep.res.list <- paramSweep_v3(experiment.aggregate, 
+                                  PCs = 1:num.pcs, 
+                                  sct = run.sctransform) 
+  
+sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE) 
+bcmvn <- find.pK(sweep.stats) 
+  
+  ## pK Identification (ground-truth) ------------------------------------------------------------------------------------------ 
+#   sweep.res.list <- paramSweep_v3(experiment.aggregate, PCs = 1:10, sct = TRUE) 
+#   gt.calls <- experiment.aggregate@meta.data[rownames(sweep.res.list[[1]]), "GT"].   ## GT is a vector containing "Singlet" and "Doublet" calls recorded using sample multiplexing classification and/or in silico geneotyping results 
+# sweep.stats <- summarizeSweep(sweep.res.list, GT = TRUE, GT.calls = gt.calls)
+# bcmvn <- find.pK(sweep.stats)
+
+## Homotypic Doublet Proportion Estimate ------------------------------------------------------------------------------------- 
+annotations <- experiment.aggregate@meta.data$integrated_snn_res.0.2
+homotypic.prop <- modelHomotypic(annotations)           ## ex: annotations <- experiment.aggregate@meta.data$ClusteringResults 
+nExp_poi <- round(0.075*nrow(experiment.aggregate@meta.data))  ## Assuming 7.5% doublet formation rate - tailor for your dataset 
+nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+
+## Run DoubletFinder with varying classification stringenciesG ----------------------------------------------------------------
+experiment.aggregate <- doubletFinder_v3(experiment.aggregate,  
+                                         PCs = 1:10,  
+                                         pN = 0.25,  
+                                         pK = 0.09,  
+                                         nExp = nExp_poi,  
+                                         reuse.pANN = FALSE,  
+                                         sct = run.sctransform)
+  
+df.class.metadata.tag <- grep("DF.classifications", 
+                              colnames(experiment.aggregate@meta.data),
+                              value = TRUE)
+
+db.plot <- DimPlot(object = experiment.aggregate, 
+                   group.by=df.class.metadata.tag,
+                   pt.size=0.5, 
+                   reduction = "umap" )
+                                         
+db.plot
+```
+
 And last lets save all the objects in our session.
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
 saveRDS(experiment.aggregate, file=part4.rds.save.path)
 
 to.save.for.report <- c("clusters.by.resolution.table",
                         "umap.dimplot.1",
-                        "umap.dimplot.2")
+                        "umap.dimplot.2",
+                        "db.plot")
 
 save(list = to.save.for.report, file=part4.file.report.path)
 

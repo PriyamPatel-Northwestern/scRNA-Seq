@@ -13,13 +13,6 @@ suppressMessages(require(kableExtra))
 suppressMessages(require(ggplot2))
 suppressMessages(require(yaml))
 
-if (!require(DoubletFinder)) {
-  install.packages("fields") 
-  remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", 
-                          upgrade = FALSE, 
-                          dependencies = FALSE)
-}
-
 ```
 
 
@@ -80,6 +73,7 @@ formatted.samples <- paste0(formatted.samples, " <br /> ")
 
 # generate list of ids for use in importing data
 ids <- config.args$project$samples # sample names, need to match the folders containing the h5 files
+seurat.sample.names <- gsub("-", "_", ids)
 
 # Use sub instead of gsub in the first call. gsub replaces all, while sub 
 # only replaces the first instance. The first dash is just there as formatting
@@ -94,14 +88,19 @@ if (organism == "human"){
   mt.marker = "^MT-"
   hb.marker = "^HB[^(P)]"
   ribo.marker = "^RP[SL]"
+  xist.gene = "XIST"
+  genes.file = "/projects/b1012/xvault/REFERENCES/10xGenomics/RNA-seq/hg38/refdata-gex-GRCh38-2020-A/genes/genes.gtf"
 } else if (organism == "mouse") {
   mt.marker = "^mt-"
   hb.marker = "^Hb[^(p)]"
-  ribo.marker = "^Rp[sl]"
+  ribo.marker = "^Rp[sl]" 
+  genes.file = "/projects/b1012/xvault/REFERENCES/10xGenomics/RNA-seq/mm10/refdata-gex-mm10-2020-A/genes/genes.gtf"
+  xist.gene = "Xist"
 } else {
   mt.marker = "NONE"
   hb.marker = "NONE"
   ribo.marker = "NONE"
+  xist.gene = "NONE"
 }
 ```
 
@@ -332,11 +331,16 @@ d10x.data <- lapply(ids, function(sample.name){
     d10x <- Read10X(tenx.matrix.path)
   }
   
+  # The 'ids' are meant to mimic the directory names, but having a hyphen in the 
+  # sample names is a problem. I fixed it above by creating the 'seurat.sample.names'
+  # list, but I have to do it again here for the column names.
+  sample.name.fixed <- gsub("-", "_", sample.name)
+  
   colnames(d10x) <- paste(
-    sapply(strsplit(colnames(d10x),split="-"),'[[',1L),sample.name,sep="-")
+    sapply(strsplit(colnames(d10x),split="-"),'[[',1L),sample.name.fixed ,sep="-")
   d10x
 })
-names(d10x.data) <- ids
+names(d10x.data) <- seurat.sample.names
 
 # str(d10x.data)
 ```
@@ -535,6 +539,58 @@ convert_sparse_mat_to_mat <- function(mat){
   colnames(tmp) <- mat@Dimnames[[2]]
   return(tmp)
 }
+
+```
+
+## Sex determination
+
+Violin plots showing expression of genes on the Y chromosome (male), along with 
+plot of expression of XIST (X-inactive specific transcript) (female). 
+
+```{r plot_y_and_xist}
+
+
+if (!file.exists(genes.file)) {
+    suppressMessages(require(biomaRt))
+
+    # initialize connection to mart, may take some time if the sites are
+    # unresponsive.
+    mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+
+    # fetch chromosome info plus some other annotations
+    genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name",
+        "description", "gene_biotype", "chromosome_name", "start_position"), mart = mart,
+        useCache = F))
+
+    if (!dir.exists("data/results")) {
+        dir.create("data/results")
+    }
+    if (is.data.frame(genes.table)) {
+        write.csv(genes.table, file = genes.file)
+    }
+
+    if (!file.exists(genes.file)) {
+        download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",
+            destfile = "data/results/genes.table.csv")
+        genes.table = read.csv(genes.file)
+    }
+
+} else { 
+  suppressMessages(require(rtracklayer)) 
+  genes.table <- import(genes.file) 
+}
+
+genes.table <- genes.table[genes.table$gene_name %in% rownames(experiment.aggregate),]
+
+
+chrY.genes <- subset(genes.table, seqnames(genes.table) == "chrY")
+chrY.gene <- chrY.genes$gene_name
+
+experiment.aggregate$pct_chrY = colSums(experiment.aggregate@assays$RNA@counts[chrY.gene,])/colSums(experiment.aggregate@assays$RNA@counts)
+
+# FeatureScatter(experiment.aggregate, feature1 = xist.gene, feature2 = "pct_chrY")
+VlnPlot(experiment.aggregate, features = c(xist.gene, "pct_chrY"))
+
 
 ```
 
