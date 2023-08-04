@@ -79,9 +79,17 @@ part3.rds.save.file <- config.args$analysis$part3$part3_rds_save_filename
 part3.rds.save.file <- sub(".RDS", paste0(part3.suffix, ".RDS"), part3.rds.save.file )
 part3.rds.save.path <- file.path(r.obj.loc, part3.rds.save.file)
 
-part3.file.for.report <- config.args$analysis$part3$part3_report_stuff_filename
-part3.file.for.report <- sub(".RData", paste0(part3.suffix, ".RData"), part3.file.for.report )
-part3.file.report.path <- file.path(r.obj.loc, part3.file.for.report)
+ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
+ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
+
+```
+
+```{r define_save_plots, echo = FALSE}
+
+save_png_plot <- function(plot, filename){
+  save.path <- file.path(ggplot.directory, paste0("part3", part3.suffix, "_", filename))
+  ggsave(save.path, plot)
+}
 
 ```
 
@@ -192,6 +200,8 @@ The list of genes comes with Seurat (only for human). We can use biomaRt to conv
 
 
 ```{r cellcycle, warning=FALSE,error=FALSE}
+# DefaultAssay(experiment.aggregate) <- "RNA" # https://github.com/satijalab/seurat/issues/1717
+
 # Mouse Code
 convertHumanGeneList <- function(x){
   require("biomaRt")
@@ -290,6 +300,9 @@ pca.loadings.2 <- VizDimLoadings(experiment.aggregate, dims = 2, ncol = 1) + the
 
 pca.loadings.1
 pca.loadings.2
+
+save_png_plot(plot = pca.loadings.1, filename = "pca_loadings_1.png")
+save_png_plot(plot = pca.loadings.2, filename = "pca_loadings_2.png")
 ```
 
 Principal components plot
@@ -297,6 +310,8 @@ Principal components plot
 pca.plot <- DimPlot(object = experiment.aggregate, reduction = "pca")
 
 pca.plot
+
+save_png_plot(plot = pca.plot, filename = "pca_dimplot.png")
 ```
 
 Draws a heatmap focusing on a principal component. Both cells and genes are sorted by their principal component scores. Allows for nice visualization of sources of heterogeneity in the dataset.
@@ -308,6 +323,9 @@ pca.heatmap.2 <- DimHeatmap(object = experiment.aggregate, dims = 7:12, cells = 
 
 pca.heatmap.1
 pca.heatmap.2
+
+save_png_plot(plot = pca.heatmap.1, filename = "pca_heatmap1.png")
+save_png_plot(plot = pca.heatmap.2, filename = "pca_heatmap2.png")
 ```
 
 ### Selecting which PCs to use
@@ -319,20 +337,16 @@ ElbowPlot plots the standard deviations (or approximate singular values if runni
 elbow.plot <- ElbowPlot(experiment.aggregate, ndims = 100)
 
 elbow.plot
+
+save_png_plot(plot = elbow.plot, filename = "elbow_plot.png")
 ```
 ## Finally, lets save the filtered and normalized data
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
 saveRDS(experiment.aggregate, file=part3.rds.save.path)
 
-to.save.for.report <- c("pca.loadings.1",
-                        "pca.loadings.2",
-                        "pca.plot",
-                        "elbow.plot",
-                        "pca.heatmap.1",
-                        "pca.heatmap.2",
-                        "cell.cycle.table")
+# to.save.for.report <- c("cell.cycle.table")
 
-save(list = to.save.for.report, file=part3.file.report.path)
+save(cell.cycle.table, file=part3.file.report.path)
 ```
 
 ## Session Information

@@ -16,7 +16,17 @@ library(kableExtra)
 library(dplyr)
 library(future)
 library(yaml)
+
+if (!require(DoubletFinder)) {
+  install.packages("fields") 
+  remotes::install_github("chris-mcginnis-ucsf/DoubletFinder", 
+                          upgrade = FALSE, 
+                          dependencies = FALSE)
+}
+
+
 ```
+
 
 ```{r prepare_inline_variables, echo = FALSE}
 # get the datetime and set it to variable
@@ -26,7 +36,7 @@ formatted.date <- format(todays.date, format="%B %d %Y")
 config.args <- read_yaml(params$config.args)
 ```
 
-```{r set_fig_dims}
+```{r set_fig_dims, eval = FALSE, echo = FALSE}
 knitr::opts_chunk$set(fig.width=14, fig.height=12, fig.align = "center") 
 ```
 
@@ -38,6 +48,13 @@ num.pcs <- config.args$analysis$part4$num_pcs
 
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
+
+batch.correction.method <- config.args$analysis$part3$batch_correction
+run.sctransform = FALSE
+
+if (batch.correction.method == "sctransform"){
+  run.sctransform = TRUE
+}
 
 part3.suffix <- config.args$analysis$part3$part3_suffix
 part4.suffix <- config.args$analysis$part4$part4_suffix
@@ -53,6 +70,18 @@ part4.rds.save.path <- file.path(r.obj.loc, part4.rds.save.file)
 part4.file.for.report <- config.args$analysis$part4$part4_report_stuff_filename
 part4.file.for.report <- sub(".RData", paste0(part4.suffix, ".RData"), part4.file.for.report )
 part4.file.report.path <- file.path(r.obj.loc, part4.file.for.report)
+
+ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
+ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
+```
+
+```{r define_save_plots, echo = FALSE}
+
+save_png_plot <- function(plot, filename){
+  save.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", filename))
+  ggsave(save.path, plot)
+}
+
 ```
 
 ### This report was generated on `r formatted.date`
@@ -105,11 +134,12 @@ The FindClusters function implements the neighbor based clustering procedure, an
 
 This implementation generates clusters at a range of different resolutions. You should pick one to do the rest of this rmd sheet, but the investigators can pick a different resolution and you can switch it up easily.
 
-```{r find_neighbors_help, warning=FALSE,error=FALSE,message=FALSE}
+```{r find_neighbors_help, warning=FALSE,error=FALSE,message=FALSE, eval = FALSE}
 ?FindNeighbors
 ```
 
 ```{r find_neighbors, warning=FALSE,error=FALSE,message=FALSE}
+DefaultAssay(experiment.aggregate) <- "integrated"
 experiment.aggregate <- FindNeighbors(experiment.aggregate, reduction="pca", dims = use.pcs)
 
 experiment.aggregate <- FindClusters(
@@ -168,16 +198,35 @@ experiment.aggregate <- RunTSNE(
 ```
 
 ### Here are uMAPs of the different resolutions
-```{r umap_group_plots_1, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
-umap.dimplot.1 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```{r umap_group_plots_1, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE, fig.width = 12, fig.height = 12}
+umap.dimplot.1 <- DimPlot(object = experiment.aggregate, 
+                          group.by=grep("res",colnames(experiment.aggregate@meta.data),
+                                        value = TRUE)[1:4], 
+                          ncol=2, 
+                          pt.size=1, 
+                          reduction = "umap", 
+                          label = T)
 
 umap.dimplot.1
+save_png_plot(plot = umap.dimplot.1, filename = "umap_dimplot1.png")
+# for(i in 1:8) { 
+#   umap.dimplot <- DimPlot(object = experiment.aggregate, 
+#                             group.by=grep("res",colnames(experiment.aggregate@meta.data), 
+#                                           value = TRUE)[i],  
+#                             pt.size=1.0,  
+#                             reduction = "umap",  
+#                             label = T)  
+#   
+#   umap.dimplot  
+#   save_png_plot(plot = umap.dimplot.1, filename = paste0("umap_dimplot", i, ".png"))
+# }
 ```
 
-```{r umap_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
-umap.dimplot.2 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```{r umap_group_plots_2, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE, fig.width = 12, fig.height = 12}
+umap.dimplot.2 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=0.5, reduction = "umap", label = T)
 
 umap.dimplot.2
+save_png_plot(plot = umap.dimplot.2, filename = "umap_dimplot2.png")
 ```
 
 
@@ -193,17 +242,56 @@ DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.a
 ```{r tsne_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
 DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "tsne", label = T)
 ```
+```{r doublet_prediction}
+
+# split the dataset into a list of seurat objects
+experiment.split <- SplitObject(experiment.aggregate, split.by = "orig.ident")
+
+# single.seurat.object <- experiment.split[[1]
+sweep.res.list <- paramSweep_v3(experiment.aggregate, 
+                                  PCs = 1:num.pcs, 
+                                  sct = run.sctransform) 
+  
+sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE) 
+bcmvn <- find.pK(sweep.stats) 
+  
+annotations <- experiment.aggregate@meta.data$integrated_snn_res.0.2
+homotypic.prop <- modelHomotypic(annotations)           
+nExp_poi <- round(0.075*nrow(experiment.aggregate@meta.data))  ## Assuming 7.5% doublet formation rate - tailor for your dataset 
+nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+
+## Run DoubletFinder with varying classification stringencies ----------------------------------------------------------------
+experiment.aggregate <- doubletFinder_v3(experiment.aggregate,  
+                                         PCs = 1:10,  
+                                         pN = 0.25,  
+                                         pK = 0.09,  
+                                         nExp = nExp_poi,  
+                                         reuse.pANN = FALSE,  
+                                         sct = run.sctransform)
+  
+df.class.metadata.tag <- grep("DF.classifications", 
+                              colnames(experiment.aggregate@meta.data),
+                              value = TRUE)
+
+db.plot <- DimPlot(object = experiment.aggregate, 
+                   group.by=df.class.metadata.tag,
+                   pt.size=0.5, 
+                   reduction = "umap" )
+                                         
+db.plot
+save_png_plot(plot = db.plot, filename = "doublet_dimplot.png")
+```
+
 And last lets save all the objects in our session.
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
 saveRDS(experiment.aggregate, file=part4.rds.save.path)
 
-to.save.for.report <- c("clusters.by.resolution.table",
-                        "umap.dimplot.1",
-                        "umap.dimplot.2")
+# to.save.for.report <- c("clusters.by.resolution.table",
+#                         "umap.dimplot.1",
+#                         "umap.dimplot.2",
+#                         "db.plot")
 
-save(list = to.save.for.report, file=part4.file.report.path)
-
-
+save(clusters.by.resolution.table, file=part4.file.report.path)
 ```
 
 ## Session Information

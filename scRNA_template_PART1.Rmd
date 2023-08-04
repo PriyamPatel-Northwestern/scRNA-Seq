@@ -7,11 +7,12 @@ params:
 ---
 ```{r import_libraries, warning=FALSE,error=FALSE,message=FALSE}
 # must have Seurat
-library(Seurat)
-library(kableExtra)
-library(ggplot2)
-library(Matrix)
-library(yaml)
+suppressMessages(require(Seurat))
+suppressMessages(require(Matrix))
+suppressMessages(require(kableExtra))
+suppressMessages(require(ggplot2))
+suppressMessages(require(yaml))
+
 ```
 
 
@@ -46,6 +47,15 @@ part1.file.for.report <-sub(".RData", paste0(part1.suffix, ".RData"), part1.file
 
 part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report)
 
+ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
+ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
+
+# create ggplot folder if it doesn't exist already
+if (!file.exists(ggplot.directory)) {
+ dir.create(ggplot.directory, showWarnings = FALSE, recursive = TRUE)
+}
+
+
 # create rds folder if it doesn't exist already
 if (!file.exists(r.obj.loc)) {
 
@@ -62,12 +72,23 @@ organism = config.args$project$organism
 # setup the sample names for printing in the inline report
 formatted.samples <- gsub("\"", "", formatted.samples)
 formatted.samples <- gsub("\ ", "  \n ", formatted.samples)
-formatted.samples <- gsub("-", " * ", formatted.samples)
+
+# These two replace the first dash in the file names, which comes from the 
+# formatting of the config file, with '*' for the rmd report
+formatted.samples <- gsub("\ -", " * ", formatted.samples)
+formatted.samples <- gsub("^-", " * ", formatted.samples)
+
 formatted.samples <- paste0(formatted.samples, " <br /> ")
 
 # generate list of ids for use in importing data
 ids <- config.args$project$samples # sample names, need to match the folders containing the h5 files
-ids <- gsub("-", "", ids)
+seurat.sample.names <- gsub("-", "_", ids)
+
+# Use sub instead of gsub in the first call. gsub replaces all, while sub 
+# only replaces the first instance. The first dash is just there as formatting
+# in the config file. This allows for names with dashes in them.
+ids <- sub("^-", "", ids)
+ids <- gsub("\ -", "\ ", ids)
 ids <- gsub("\"", "", ids)
 ids <- strsplit(ids, "[[:space:]]")
 ids <- unlist(ids)
@@ -76,15 +97,29 @@ if (organism == "human"){
   mt.marker = "^MT-"
   hb.marker = "^HB[^(P)]"
   ribo.marker = "^RP[SL]"
+  xist.gene = "XIST"
+  genes.file = "/projects/b1012/xvault/REFERENCES/10xGenomics/RNA-seq/hg38/refdata-gex-GRCh38-2020-A/genes/genes.gtf"
 } else if (organism == "mouse") {
   mt.marker = "^mt-"
   hb.marker = "^Hb[^(p)]"
-  ribo.marker = "^Rp[sl]"
+  ribo.marker = "^Rp[sl]" 
+  genes.file = "/projects/b1012/xvault/REFERENCES/10xGenomics/RNA-seq/mm10/refdata-gex-mm10-2020-A/genes/genes.gtf"
+  xist.gene = "Xist"
 } else {
   mt.marker = "NONE"
   hb.marker = "NONE"
   ribo.marker = "NONE"
+  xist.gene = "NONE"
 }
+```
+
+```{r define_save_plots, echo = FALSE}
+
+save_png_plot <- function(plot, filename){
+  save.path <- file.path(ggplot.directory, paste0("part1", part1.suffix, "_", filename))
+  ggsave(save.path, plot)
+}
+
 ```
 
 ## Report and variable details
@@ -125,10 +160,23 @@ Part 1 focuses on getting data into R and setting up our initial object.
 <br/>
 
 ```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE}
-d10x.metrics <- lapply(ids, function(i){
-  print(i)
-  metrics.path <- file.path(dataset.path,i,"metrics_summary.csv")
-  metrics <- read.csv(metrics.path, colClasses = "character")
+d10x.metrics <- lapply(ids, function(sample.name){
+  print(sample.name)
+  metrics.path.cleaned <- file.path(dataset.path,sample.name,"metrics_summary.csv")
+  metrics.path.raw <- file.path(dataset.path, sample.name, "outs/metrics_summary.csv") 
+  tryCatch( 
+    {  
+      if(file.exists(metrics.path.cleaned)){     
+        metrics <- read.csv(metrics.path.cleaned, colClasses = "character")  
+        } else if (file.exists(metrics.path.raw)) { 
+          metrics <- read.csv(metrics.path.raw, colClasses = "character")  
+        } 
+      }, 
+    error=function(cond) { 
+      message(paste0("Error loading the sample ", sample.name)) 
+      message("Here's the original error message:")  
+      }
+    )
 })
 experiment.metrics <- do.call("rbind", d10x.metrics)
 rownames(experiment.metrics) <- ids
@@ -283,21 +331,34 @@ Objects created for:
 
 ```{r load_tenx_data, warning=FALSE,error=FALSE, message=FALSE}
 
-d10x.data <- lapply(ids, function(i){
-  print(i)
+d10x.data <- lapply(ids, function(sample.name){
+  print(paste0("Importing data for ", sample.name)) 
+  
+  if (dir.exists(file.path(dataset.path, sample.name, "outs"))){ 
+    tenx.h5.path <- file.path(dataset.path,sample.name,"outs/raw_feature_bc_matrix.h5")
+    tenx.matrix.path <- file.path(dataset.path,sample.name,"outs/raw_feature_bc_matrix")
+  } else {
+    tenx.h5.path <- file.path(dataset.path,sample.name,"raw_feature_bc_matrix.h5")
+    tenx.matrix.path <- file.path(dataset.path,sample.name,"raw_feature_bc_matrix")
+  }
+
   
   if (import.h5){
-    raw.data.path <- file.path(dataset.path,i,"raw_feature_bc_matrix.h5")
-    d10x <- Read10X_h5(raw.data.path)
+    d10x <- Read10X_h5(tenx.h5.path)
   } else {
-    raw.data.path <- file.path(dataset.path,i,"raw_feature_bc_matrix")
-    d10x <- Read10X(raw.data.path)
+    d10x <- Read10X(tenx.matrix.path)
   }
   
-  colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-")
+  # The 'ids' are meant to mimic the directory names, but having a hyphen in the 
+  # sample names is a problem. I fixed it above by creating the 'seurat.sample.names'
+  # list, but I have to do it again here for the column names.
+  sample.name.fixed <- gsub("-", "_", sample.name)
+  
+  colnames(d10x) <- paste(
+    sapply(strsplit(colnames(d10x),split="-"),'[[',1L),sample.name.fixed ,sep="-")
   d10x
 })
-names(d10x.data) <- ids
+names(d10x.data) <- seurat.sample.names
 
 # str(d10x.data)
 ```
@@ -441,7 +502,11 @@ part1.vln.plots <- VlnPlot(
   features = c("nFeature_RNA", "nCount_RNA","percent.mito", "percent.rbc", "percent.ribo"),
   ncol = 1, pt.size = 0.3)
 
+p1.vln.plot.filename <- "part1_vln_plots.png"
+p1.vln.plot.path <- file.path(ggplot.directory, p1.vln.plot.filename)
+
 part1.vln.plots
+ggsave(p1.vln.plot.path, part1.vln.plots)
 ```
 
 ### Plot ridgeplots of the same data
@@ -499,18 +564,88 @@ convert_sparse_mat_to_mat <- function(mat){
 
 ```
 
+## Sex determination
+
+Violin plots showing expression of genes on the Y chromosome (male), along with 
+plot of expression of XIST (X-inactive specific transcript) (female). 
+
+```{r plot_y_and_xist}
+Idents(experiment.aggregate) <- "orig.ident"
+
+if (!file.exists(genes.file)) {
+    suppressMessages(require(biomaRt))
+
+    # initialize connection to mart, may take some time if the sites are
+    # unresponsive.
+    mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+
+    # fetch chromosome info plus some other annotations
+    genes.table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name",
+        "description", "gene_biotype", "chromosome_name", "start_position"), mart = mart,
+        useCache = F))
+
+    if (!dir.exists("data/results")) {
+        dir.create("data/results")
+    }
+    if (is.data.frame(genes.table)) {
+        write.csv(genes.table, file = genes.file)
+    }
+
+    if (!file.exists(genes.file)) {
+        download.file("https://raw.githubusercontent.com/NBISweden/workshop-scRNAseq/master/labs/misc/genes.table.csv",
+            destfile = "data/results/genes.table.csv")
+        genes.table = read.csv(genes.file)
+    }
+
+} else { 
+  suppressMessages(require(rtracklayer)) 
+  genes.table <- import(genes.file) 
+}
+
+genes.table <- genes.table[genes.table$gene_name %in% rownames(experiment.aggregate),]
+
+
+chrY.genes <- subset(genes.table, seqnames(genes.table) == "chrY")
+chrY.gene <- chrY.genes$gene_name
+
+experiment.aggregate$pct_chrY = colSums(experiment.aggregate@assays$RNA@counts[chrY.gene,])/colSums(experiment.aggregate@assays$RNA@counts)
+
+# FeatureScatter(experiment.aggregate, feature1 = xist.gene, feature2 = "pct_chrY")
+sex.vln.plots <- VlnPlot(experiment.aggregate, features = c(xist.gene, "pct_chrY"))
+
+sex.vln.plot.filename <- "part1_sex_vln_plots.png"
+sex.vln.plot.path <- file.path(ggplot.directory, sex.vln.plot.filename)
+
+ggsave(sex.vln.plot.path, sex.vln.plots)
+
+sex.vln.plots
+
+```
+
 # Top 20 most highly expressed genes in this dataset
 
 ## Relative expression of each gene per cell
 ```{r relative expression, warning=FALSE,error=FALSE,message=FALSE}
+rel.exp.bp.filename <- "part1_relative_expression_boxplot.png"
+rel.exp.bp.path <- file.path(ggplot.directory, rel.exp.bp.filename)
+
 par(mar = c(4, 8, 2, 1))
 C <- experiment.aggregate@assays$RNA@counts
 C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
 C_mat <- convert_sparse_mat_to_mat(C)
 # most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
 most_expressed <- order(apply(C_mat, 1, median), decreasing = T)[20:1]
-relative.expression.boxplot <- boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
-    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+
+# png(rel.exp.bp.path, width = 1620, height = 1125)
+relative.expression.boxplot <- boxplot(as.matrix(t(C[most_expressed, ])), 
+                                       cex = 0.8, 
+                                       las = 1, 
+                                       xlab = "% total count per cell", 
+                                       col = (scales::hue_pal())(20)[20:1], 
+                                       horizontal = TRUE)
+# dev.off()
+
+# relative.expression.boxplot
 
 # relative.expression.boxplot
 ```
@@ -526,9 +661,7 @@ save(list=c("sequencing.char.table",
             "mapping.char.table.1",  
             "mapping.char.table.2",  
             "cell.char.table", 
-            "barcode.umi.fig.list",
-            "part1.vln.plots",
-            "relative.expression.boxplot"), 
+            "barcode.umi.fig.list"), 
      file=part1.file.report.path)
 ```
 

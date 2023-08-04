@@ -64,8 +64,20 @@ part2.rds.save.path <- file.path(r.obj.loc, part2.rds.save.file)
 part2.file.for.report <- config.args$analysis$part2$part2_report_stuff_filename
 part2.file.for.report <-sub(".RData", paste0(part2.suffix, ".RData"), part2.file.for.report)
 part2.file.report.path <- file.path(r.obj.loc, part2.file.for.report)
+
+ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
+ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
 ```
 
+
+```{r define_save_plots, echo = FALSE}
+
+save_png_plot <- function(plot, filename){
+  save.path <- file.path(ggplot.directory, paste0("part2", part2.suffix, "_", filename))
+  ggsave(save.path, plot)
+}
+
+```
 ### This report was generated on `r formatted.date`
 
 * node.type: `r node.type`
@@ -158,6 +170,14 @@ ribo.rbc.scatter
 ribo.mito.scatter 
 mito.rbc.scatter 
 nFeature.rbc.scatter 
+
+save_png_plot(plot = nCount.mito.scatter, filename = "nCount_mito.png")
+save_png_plot(plot = nFeature.mito.scatter, filename = "nFeat_mito.png")
+save_png_plot(plot = nCount.nFeature.scatter, filename = "nCount_nFeat.png")
+save_png_plot(plot = ribo.rbc.scatter, filename = "ribo_rbc.png")
+save_png_plot(plot = ribo.mito.scatter, filename = "ribo_mito.png")
+save_png_plot(plot = mito.rbc.scatter, filename = "mito_rbc.png")
+save_png_plot(plot = nFeature.rbc.scatter, filename = "nFeat_rbc.png")
 ```
 
 ## Cell filtering stats
@@ -195,6 +215,8 @@ pretty.combo.table
 Ridgeplots before filtering:
 ```{r ridgeplot_pre, warning=FALSE,error=FALSE,message=FALSE}
 ridgeplot.prefiltering
+save_png_plot(plot = ridgeplot.prefiltering, 
+              filename = "ridgeplot_prefiltering.png")
 ```
 
 
@@ -202,6 +224,9 @@ Ridgeplots after filtering
 ```{r ridgeplot_post, warning=FALSE,error=FALSE,message=FALSE}
 ridgeplot.postfiltering <- RidgePlot(experiment.aggregate, features=c("nFeature_RNA","nCount_RNA", "percent.mito", "percent.rbc", "percent.ribo"), ncol = 2)
 ridgeplot.postfiltering
+
+save_png_plot(plot = ridgeplot.postfiltering, 
+              filename = "ridgeplot_postfiltering.png")
 ```
 
 <br/>
@@ -216,17 +241,7 @@ to.save.for.report <- c("mito.cutoff",
                         "feature.count.ceiling", 
                         "rbc.cutoff", 
                         "ribo.cutoff",
-                        "ridgeplot.prefiltering",
-												"nCount.mito.scatter",
-												"nFeature.mito.scatter",
-												"nCount.nFeature.scatter",
-												"ribo.rbc.scatter",
-												"ribo.mito.scatter",
-												"mito.rbc.scatter",
-												"nFeature.rbc.scatter",
-												"pretty.combo.table",
-												"ridgeplot.postfiltering",
-												"ridgeplot.postfiltering"
+												"pretty.combo.table"
                         )
 
 save(list = to.save.for.report, file=part2.file.report.path)
