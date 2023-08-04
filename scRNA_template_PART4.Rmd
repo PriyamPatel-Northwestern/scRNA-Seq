@@ -27,6 +27,7 @@ if (!require(DoubletFinder)) {
 
 ```
 
+
 ```{r prepare_inline_variables, echo = FALSE}
 # get the datetime and set it to variable
 todays.date <- Sys.Date()
@@ -35,7 +36,7 @@ formatted.date <- format(todays.date, format="%B %d %Y")
 config.args <- read_yaml(params$config.args)
 ```
 
-```{r set_fig_dims}
+```{r set_fig_dims, eval = FALSE, echo = FALSE}
 knitr::opts_chunk$set(fig.width=14, fig.height=12, fig.align = "center") 
 ```
 
@@ -69,6 +70,18 @@ part4.rds.save.path <- file.path(r.obj.loc, part4.rds.save.file)
 part4.file.for.report <- config.args$analysis$part4$part4_report_stuff_filename
 part4.file.for.report <- sub(".RData", paste0(part4.suffix, ".RData"), part4.file.for.report )
 part4.file.report.path <- file.path(r.obj.loc, part4.file.for.report)
+
+ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
+ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
+```
+
+```{r define_save_plots, echo = FALSE}
+
+save_png_plot <- function(plot, filename){
+  save.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", filename))
+  ggsave(save.path, plot)
+}
+
 ```
 
 ### This report was generated on `r formatted.date`
@@ -185,16 +198,35 @@ experiment.aggregate <- RunTSNE(
 ```
 
 ### Here are uMAPs of the different resolutions
-```{r umap_group_plots_1, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
-umap.dimplot.1 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```{r umap_group_plots_1, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE, fig.width = 12, fig.height = 12}
+umap.dimplot.1 <- DimPlot(object = experiment.aggregate, 
+                          group.by=grep("res",colnames(experiment.aggregate@meta.data),
+                                        value = TRUE)[1:4], 
+                          ncol=2, 
+                          pt.size=1, 
+                          reduction = "umap", 
+                          label = T)
 
 umap.dimplot.1
+save_png_plot(plot = umap.dimplot.1, filename = "umap_dimplot1.png")
+# for(i in 1:8) { 
+#   umap.dimplot <- DimPlot(object = experiment.aggregate, 
+#                             group.by=grep("res",colnames(experiment.aggregate@meta.data), 
+#                                           value = TRUE)[i],  
+#                             pt.size=1.0,  
+#                             reduction = "umap",  
+#                             label = T)  
+#   
+#   umap.dimplot  
+#   save_png_plot(plot = umap.dimplot.1, filename = paste0("umap_dimplot", i, ".png"))
+# }
 ```
 
-```{r umap_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
-umap.dimplot.2 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```{r umap_group_plots_2, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE, fig.width = 12, fig.height = 12}
+umap.dimplot.2 <- DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=0.5, reduction = "umap", label = T)
 
 umap.dimplot.2
+save_png_plot(plot = umap.dimplot.2, filename = "umap_dimplot2.png")
 ```
 
 
@@ -215,60 +247,7 @@ DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.a
 # split the dataset into a list of seurat objects
 experiment.split <- SplitObject(experiment.aggregate, split.by = "orig.ident")
 
-# single.seurat.object <- experiment.split[[1]]
-# normalize and identify variable features for each dataset independently
-# experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.object) {   
-#   
-#   ## pK Identification (no ground-truth) --------------------------------------------------------------------------------------- 
-#   sweep.res.list <- paramSweep_v3(single.seurat.object, 
-#                                   PCs = 1:num.pcs, 
-#                                   sct = run.sctransform) 
-#   
-#   sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE) 
-#   bcmvn <- find.pK(sweep.stats) 
-#   
-#   ## pK Identification (ground-truth) ------------------------------------------------------------------------------------------ 
-# #   sweep.res.list <- paramSweep_v3(single.seurat.object, PCs = 1:10, sct = TRUE) 
-# #   gt.calls <- single.seurat.object@meta.data[rownames(sweep.res.list[[1]]), "GT"].   ## GT is a vector containing "Singlet" and "Doublet" calls recorded using sample multiplexing classification and/or in silico geneotyping results 
-# # sweep.stats <- summarizeSweep(sweep.res.list, GT = TRUE, GT.calls = gt.calls)
-# # bcmvn <- find.pK(sweep.stats)
-# 
-# ## Homotypic Doublet Proportion Estimate ------------------------------------------------------------------------------------- 
-#   annotations <- single.seurat.object@meta.data$integrated_snn_res.0.2
-#   homotypic.prop <- modelHomotypic(annotations)           ## ex: annotations <- single.seurat.object@meta.data$ClusteringResults 
-#   nExp_poi <- round(0.075*nrow(single.seurat.object@meta.data))  ## Assuming 7.5% doublet formation rate - tailor for your dataset 
-#   nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
-# 
-# ## Run DoubletFinder with varying classification stringenciesG ----------------------------------------------------------------
-#   single.seurat.object <- doubletFinder_v3(single.seurat.object, 
-#                                            PCs = 1:10, 
-#                                            pN = 0.25, 
-#                                            pK = 0.09, 
-#                                            nExp = nExp_poi, 
-#                                            reuse.pANN = FALSE, 
-#                                            sct = run.sctransform)
-#   
-#   single.seurat.object
-#   
-#   
-# # # single.seurat.object <- doubletFinder_v3(single.seurat.object, PCs = 1:10, pN = 0.25, pK = 0.09, nExp = nExp_poi.adj, reuse.pANN = "pANN_0.25_0.09_913", sct = TRUE)
-# # 
-# #   curr.sample.name <- unique(single.seurat.object$orig.ident)
-# #   print(paste0("Sample ", curr.sample.name))
-# #   
-# #   
-# #   nExp <- round(ncol(single.seurat.object) * 0.04)  # expect 4% doublets
-# #   sweep.list <- paramSweep_v3(single.seurat.object, PCs = 1:num.pcs, sct=TRUE)
-# #   sweep.stats <- summarizeSweep(sweep.list, GT=FALSE)
-# # 
-# # 
-# #   single.seurat.object <- doubletFinder_v3(single.seurat.object, 
-# #                                            sct = TRUE, 
-# #                                            sweep.list)
-# #   single.seurat.object
-# 
-# })
-
+# single.seurat.object <- experiment.split[[1]
 sweep.res.list <- paramSweep_v3(experiment.aggregate, 
                                   PCs = 1:num.pcs, 
                                   sct = run.sctransform) 
@@ -276,19 +255,12 @@ sweep.res.list <- paramSweep_v3(experiment.aggregate,
 sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE) 
 bcmvn <- find.pK(sweep.stats) 
   
-  ## pK Identification (ground-truth) ------------------------------------------------------------------------------------------ 
-#   sweep.res.list <- paramSweep_v3(experiment.aggregate, PCs = 1:10, sct = TRUE) 
-#   gt.calls <- experiment.aggregate@meta.data[rownames(sweep.res.list[[1]]), "GT"].   ## GT is a vector containing "Singlet" and "Doublet" calls recorded using sample multiplexing classification and/or in silico geneotyping results 
-# sweep.stats <- summarizeSweep(sweep.res.list, GT = TRUE, GT.calls = gt.calls)
-# bcmvn <- find.pK(sweep.stats)
-
-## Homotypic Doublet Proportion Estimate ------------------------------------------------------------------------------------- 
 annotations <- experiment.aggregate@meta.data$integrated_snn_res.0.2
-homotypic.prop <- modelHomotypic(annotations)           ## ex: annotations <- experiment.aggregate@meta.data$ClusteringResults 
+homotypic.prop <- modelHomotypic(annotations)           
 nExp_poi <- round(0.075*nrow(experiment.aggregate@meta.data))  ## Assuming 7.5% doublet formation rate - tailor for your dataset 
 nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 
-## Run DoubletFinder with varying classification stringenciesG ----------------------------------------------------------------
+## Run DoubletFinder with varying classification stringencies ----------------------------------------------------------------
 experiment.aggregate <- doubletFinder_v3(experiment.aggregate,  
                                          PCs = 1:10,  
                                          pN = 0.25,  
@@ -307,20 +279,19 @@ db.plot <- DimPlot(object = experiment.aggregate,
                    reduction = "umap" )
                                          
 db.plot
+save_png_plot(plot = db.plot, filename = "doublet_dimplot.png")
 ```
 
 And last lets save all the objects in our session.
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
 saveRDS(experiment.aggregate, file=part4.rds.save.path)
 
-to.save.for.report <- c("clusters.by.resolution.table",
-                        "umap.dimplot.1",
-                        "umap.dimplot.2",
-                        "db.plot")
+# to.save.for.report <- c("clusters.by.resolution.table",
+#                         "umap.dimplot.1",
+#                         "umap.dimplot.2",
+#                         "db.plot")
 
-save(list = to.save.for.report, file=part4.file.report.path)
-
-
+save(clusters.by.resolution.table, file=part4.file.report.path)
 ```
 
 ## Session Information

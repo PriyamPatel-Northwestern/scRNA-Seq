@@ -1,7 +1,7 @@
 ---
 project: 
-        analyst-name: "your name"
-        project-name: "project name"
+        analyst-name: "your name" # Also fill this out in 'common.yaml'
+        project-name: "project name" # Also fill this out in 'common.yaml'
         project-decription: "long string here"
         organism: "human or mouse"
         samples:
@@ -21,8 +21,9 @@ analysis:
         node_type: "analytics" # compute (when submitting with sbatch) or analytics. See import-h5 above as well.
         part1: 
                 part1_rds_save_filename: "original_seurat_object.RDS"
-                part1_report_stuff_filename: "part1_stuff_for_report.RData" 
+                part1_report_tables_filename: "part1_tables_for_report.RData" 
                 part1_suffix: ""
+                ggplot_dir: "ggplot"
         part2: 
                 part2_rds_open_filename: "original_seurat_object.RDS"
                 mito_cutoff: 100 
@@ -33,26 +34,25 @@ analysis:
                 rbc_cutoff: 100 
                 ribo_cutoff: 0
                 part2_rds_save_filename: "pre_sample_corrected.RDS"
-                part2_report_stuff_filename: "part2_stuff_for_report.RData"
+                part2_report_tables_filename: "part2_tables_for_report.RData"
                 part2_suffix: ""
         part3:
                 part3_rds_open_filename: "pre_sample_corrected.RDS"
                 part3_rds_save_filename: "pca_sample_corrected.RDS"
-                part3_report_stuff_filename: "part3_stuff_for_report.RData"
+                part3_report_tables_filename: "part3_tables_for_report.RData"
                 batch_correction: "none" # sctransform, orig_ident, or none
                 part3_suffix: ""
         part4:
                 part4_rds_open_filename: "pca_sample_corrected.RDS"
                 num_pcs: 50
                 part4_rds_save_filename: "clusters_seurat_object.RDS"
-                part4_report_stuff_filename: "part4_stuff_for_report.RData"
+                part4_report_tables_filename: "part4_tables_for_report.RData"
                 part4_suffix: ""
         part5:
                 part5_rds_open_filename: "clusters_seurat_object.RDS"
                 resolution_selection: "RNA_snn_res.0.25"
-                part5_report_stuff_filename: "part5_stuff_for_report.RData"
+                part5_report_tables_filename: "part5_tables_for_report.RData"
                 part5_rds_save_filename: "clustered_seurat_object_and_markers.RDS"
-                ggplot_dir: "ggplot"
                 marker_gene_dir: "marker_genes"
                 part5_suffix: ""
 ---

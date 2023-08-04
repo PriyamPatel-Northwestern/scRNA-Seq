@@ -47,6 +47,15 @@ part1.file.for.report <-sub(".RData", paste0(part1.suffix, ".RData"), part1.file
 
 part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report)
 
+ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
+ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
+
+# create ggplot folder if it doesn't exist already
+if (!file.exists(ggplot.directory)) {
+ dir.create(ggplot.directory, showWarnings = FALSE, recursive = TRUE)
+}
+
+
 # create rds folder if it doesn't exist already
 if (!file.exists(r.obj.loc)) {
 
@@ -102,6 +111,15 @@ if (organism == "human"){
   ribo.marker = "NONE"
   xist.gene = "NONE"
 }
+```
+
+```{r define_save_plots, echo = FALSE}
+
+save_png_plot <- function(plot, filename){
+  save.path <- file.path(ggplot.directory, paste0("part1", part1.suffix, "_", filename))
+  ggsave(save.path, plot)
+}
+
 ```
 
 ## Report and variable details
@@ -484,7 +502,11 @@ part1.vln.plots <- VlnPlot(
   features = c("nFeature_RNA", "nCount_RNA","percent.mito", "percent.rbc", "percent.ribo"),
   ncol = 1, pt.size = 0.3)
 
+p1.vln.plot.filename <- "part1_vln_plots.png"
+p1.vln.plot.path <- file.path(ggplot.directory, p1.vln.plot.filename)
+
 part1.vln.plots
+ggsave(p1.vln.plot.path, part1.vln.plots)
 ```
 
 ### Plot ridgeplots of the same data
@@ -548,7 +570,7 @@ Violin plots showing expression of genes on the Y chromosome (male), along with
 plot of expression of XIST (X-inactive specific transcript) (female). 
 
 ```{r plot_y_and_xist}
-
+Idents(experiment.aggregate) <- "orig.ident"
 
 if (!file.exists(genes.file)) {
     suppressMessages(require(biomaRt))
@@ -589,8 +611,14 @@ chrY.gene <- chrY.genes$gene_name
 experiment.aggregate$pct_chrY = colSums(experiment.aggregate@assays$RNA@counts[chrY.gene,])/colSums(experiment.aggregate@assays$RNA@counts)
 
 # FeatureScatter(experiment.aggregate, feature1 = xist.gene, feature2 = "pct_chrY")
-VlnPlot(experiment.aggregate, features = c(xist.gene, "pct_chrY"))
+sex.vln.plots <- VlnPlot(experiment.aggregate, features = c(xist.gene, "pct_chrY"))
 
+sex.vln.plot.filename <- "part1_sex_vln_plots.png"
+sex.vln.plot.path <- file.path(ggplot.directory, sex.vln.plot.filename)
+
+ggsave(sex.vln.plot.path, sex.vln.plots)
+
+sex.vln.plots
 
 ```
 
@@ -598,14 +626,26 @@ VlnPlot(experiment.aggregate, features = c(xist.gene, "pct_chrY"))
 
 ## Relative expression of each gene per cell
 ```{r relative expression, warning=FALSE,error=FALSE,message=FALSE}
+rel.exp.bp.filename <- "part1_relative_expression_boxplot.png"
+rel.exp.bp.path <- file.path(ggplot.directory, rel.exp.bp.filename)
+
 par(mar = c(4, 8, 2, 1))
 C <- experiment.aggregate@assays$RNA@counts
 C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
 C_mat <- convert_sparse_mat_to_mat(C)
 # most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]
 most_expressed <- order(apply(C_mat, 1, median), decreasing = T)[20:1]
-relative.expression.boxplot <- boxplot(as.matrix(t(C[most_expressed, ])), cex = 0.1, las = 1, xlab = "% total count per cell",
-    col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+
+# png(rel.exp.bp.path, width = 1620, height = 1125)
+relative.expression.boxplot <- boxplot(as.matrix(t(C[most_expressed, ])), 
+                                       cex = 0.8, 
+                                       las = 1, 
+                                       xlab = "% total count per cell", 
+                                       col = (scales::hue_pal())(20)[20:1], 
+                                       horizontal = TRUE)
+# dev.off()
+
+# relative.expression.boxplot
 
 # relative.expression.boxplot
 ```
@@ -621,9 +661,7 @@ save(list=c("sequencing.char.table",
             "mapping.char.table.1",  
             "mapping.char.table.2",  
             "cell.char.table", 
-            "barcode.umi.fig.list",
-            "part1.vln.plots",
-            "relative.expression.boxplot"), 
+            "barcode.umi.fig.list"), 
      file=part1.file.report.path)
 ```
 

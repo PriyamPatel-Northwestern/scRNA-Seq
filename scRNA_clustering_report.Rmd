@@ -1,10 +1,11 @@
 ---
 output:
   html_document:
-pandoc_args: './common.yaml'
+    pandoc_args: './common.yaml'
 params:
-config_args: "./config.yaml"
+  config.args: "./config.yaml"
 ---
+
 
 ```{r load_packages_and_rdata, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
 library(Seurat)
@@ -22,8 +23,8 @@ formatted.date <- format(todays.date, format="%B %d %Y")
 
 # Import the config file
 
-config.args <- read_yaml("/home/bwp9287/pipelines/scRNA-Seq/config_integrated.yaml")
-# config.args <- read_yaml(params$config.args)
+# config.args <- read_yaml("/home/bwp9287/pipelines/scRNA-Seq/config_integrated.yaml")
+config.args <- read_yaml(params$config.args)
 
 # Info for printing in the report
 project.description <- config.args$project$`project-decription`
@@ -50,14 +51,14 @@ part5.file.for.report <- config.args$analysis$part5$part5_report_stuff_filename
 part5.file.for.report <-sub(".RData", paste0(part5.suffix, ".RData"), part5.file.for.report)
 part5.file.report.path <-file.path(r.obj.loc, part5.file.for.report)
 
-ggplot.subdir <- config.args$analysis$part5$ggplot_dir
+ggplot.subdir <- config.args$analysis$part1$ggplot_dir
 
 # Load the report files
 load(part3.file.report.path)
 load(part4.file.report.path)
 load(part5.file.report.path)
 
-ggplot.directory <- file.path(r.obj.loc, paste0("ggplot", part5.suffix))
+ggplot.directory <- file.path(r.obj.loc, ggplot.subdir)
 
 # create ggplot folder if it doesn't exist already
 if (!file.exists(ggplot.directory)) {
@@ -94,7 +95,9 @@ In order to pick the proper number of PCs to use we can look at a number of diff
 
 
 ```{r load_pre-pca_obj, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
-elbow.plot
+elbow.plot.path <- file.path(ggplot.directory, paste0("part3", part3.suffix, "_", "elbow_plot.png"))
+
+knitr::include_graphics(elbow.plot.path)
 ```
 <br/>
 <br/>
@@ -124,10 +127,12 @@ And here are the clustering results looking at the 4 lowest resolutions (0.25, 0
 
 <br/>
 
-```{r resolution_clust_num_plots, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 14}
-# DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[1:4], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```{r resolution_clust_num_plots, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 12}
 
-umap.dimplot.1
+umap.dimplot1.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", "umap_dimplot1.png"))
+
+knitr::include_graphics(umap.dimplot1.path)
+
 ```
 <br/>
 <br/>
@@ -135,10 +140,11 @@ And here are the clustering results looking at the 4 highest resolutions (2.25, 
 
 <br/>
 
-```{r resolution_clust_num_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 14}
-# DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "umap", label = T)
+```{r resolution_clust_num_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 12}
 
-umap.dimplot.2
+umap.dimplot2.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", "umap_dimplot2.png"))
+
+knitr::include_graphics(umap.dimplot2.path)
 ```
 <br/>
 <br/>
@@ -151,18 +157,18 @@ All of the plots below are based on a resolution of `r resolution.selection`
 
 ### Plot UMAP coloring by the slot 'ident' (i.e. cluster number, default).
 ```{r plot_umap, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
-# DimPlot(object = experiment.aggregate, pt.size=0.5, reduction = "umap", label = T)
+cluster.umap.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "cluster_umap.png"))
 
-cluster.umap
+knitr::include_graphics(cluster.umap.path)
 ```
 <br/>
 <br/>
 
 ### Plot UMAP coloring by the slot 'orig.ident' (sample names)
 ```{r plot_orig_ident, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
-# DimPlot(object = experiment.aggregate, group.by="orig.ident", pt.size=0.5, reduction = "umap" )
+sample.umap.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "sample_umap.png"))
 
-sample.umap
+knitr::include_graphics(sample.umap.path)
 ```
 
 <br/>
@@ -180,9 +186,10 @@ clusters.to.sample.table
 
 ### Number of UMIs (i.e. how many unique rna molecules are in each cell):
 ```{r plot_rna, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
-# FeaturePlot(experiment.aggregate, features = c('nCount_RNA'), pt.size=0.5)
 
-nUMI.featureplot
+nUMI.featplot.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "nUMI_featplot.png"))
+
+knitr::include_graphics(nUMI.featplot.path)
 ```
 
 <br/>
@@ -190,9 +197,9 @@ nUMI.featureplot
 
 ### Number of genes present (i.e. how many different genes are represented by the UMIs):
 ```{r plot_feature, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
-# FeaturePlot(experiment.aggregate, features = c('nFeature_RNA'), pt.size=0.5)
+nGenes.featplot.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "nGenes_featplot.png"))
 
-nGenes.featureplot
+knitr::include_graphics(nGenes.featplot.path)
 ```
 
 <br/>
@@ -200,9 +207,9 @@ nGenes.featureplot
 
 ### Percent mitochondrial
 ```{r plot_mito, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
-# FeaturePlot(experiment.aggregate, features = c('percent.mito'), pt.size=0.5)
+pctmito.featplot.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "pctmito_featplot.png"))
 
-pctmito.featureplot
+knitr::include_graphics(pctmito.featplot.path)
 ```
 <br/>
 <br/>
@@ -211,6 +218,16 @@ pctmito.featureplot
 ```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
 cell.cycle.table
 # table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
+```
+<br/>
+<br/>
+
+
+#### Table of doublet predictions
+```{r doublet_figure, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+doublet.dimplot.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", "doublet_dimplot.png"))
+
+knitr::include_graphics(doublet.dimplot.path)
 ```
 <br/>
 <br/>
@@ -226,8 +243,19 @@ figure.list <- list()
 # Note that knitr::include_graphics doesn't work in a loop. Instead, I'll make a list of lists of filenames
 figure.list <- sapply(num.clusters.list, function(cluster.num){
 
-  feat.plot.path <- file.path(ggplot.directory, paste0("featurePlot_cluster_", cluster.num, ".png"))
-  vln.plot.path <- file.path(ggplot.directory, paste0("violinPlot_cluster_", cluster.num, ".png"))
+  feat.plot.path <- file.path(ggplot.directory, 
+                              paste0("part5", 
+                                     part5.suffix, 
+                                     "_marker_gene_featPlot_cl_", 
+                                     cluster.num, 
+                                     ".png"))
+  
+  vln.plot.path <- file.path(ggplot.directory, 
+                             paste0("part5", 
+                                    part5.suffix, 
+                                    "_marker_gene_vlnPlot_cl_", 
+                                    cluster.num, 
+                                    ".png"))
   
   figure.list <- append(figure.list, feat.plot.path)
   figure.list <- append(figure.list, vln.plot.path)

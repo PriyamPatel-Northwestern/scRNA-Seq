@@ -55,8 +55,7 @@ part5.file.for.report <- config.args$analysis$part5$part5_report_stuff_filename
 part5.file.for.report <- sub(".RData", paste0(part5.suffix, ".RData"), part5.file.for.report )
 part5.file.report.path <- file.path(r.obj.loc, part5.file.for.report)
 
-ggplot.directory.name <- config.args$analysis$part5$ggplot_dir
-ggplot.directory.name <- paste0(ggplot.directory.name, part5.suffix)
+ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
 ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
 
 marker.gene.dir.name <- config.args$analysis$part5$marker_gene_dir
@@ -71,6 +70,15 @@ if (!file.exists(ggplot.directory)) {
 if (!file.exists(marker.gene.dir)) {
  dir.create(marker.gene.dir, showWarnings = FALSE, recursive = TRUE)
 }
+```
+
+```{r define_save_plots, echo = FALSE}
+
+save_png_plot <- function(plot, filename){
+  save.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", filename))
+  ggsave(save.path, plot)
+}
+
 ```
 
 ### This report was generated on `r formatted.date`
@@ -139,6 +147,8 @@ cluster.umap <- DimPlot(object = experiment.aggregate,
                         label = T)
 
 cluster.umap
+
+save_png_plot(plot = cluster.umap, filename = "cluster_umap.png")
 ```
 
 ### Plot UMAP  coloring by the slot 'orig.ident' (sample names) with alpha colors turned on. A pretty picture
@@ -146,6 +156,7 @@ cluster.umap
 sample.umap <- DimPlot(object = experiment.aggregate, group.by="orig.ident", pt.size=0.5, reduction = "umap" )
 
 sample.umap
+save_png_plot(plot = sample.umap, filename = "sample_umap.png")
 ```
 
 
@@ -155,6 +166,7 @@ sample.umap
 cellcycle.umap <- DimPlot(object = experiment.aggregate, pt.size=0.5, group.by = "Phase", reduction = "umap" )
 
 cellcycle.umap
+save_png_plot(plot = cellcycle.umap, filename = "cellcycle_umap.png")
 ```
 
 
@@ -165,12 +177,14 @@ FeaturePlot can be used to color cells with a 'feature', non categorical data, l
 nUMI.featureplot <- FeaturePlot(experiment.aggregate, features = c('nCount_RNA'), pt.size=0.5)
 
 nUMI.featureplot
+save_png_plot(plot = nUMI.featureplot, filename = "nUMI_featplot.png")
 ```
 and number of genes present
 ```{r plot_feature, warning=FALSE,error=FALSE,message=FALSE}
 nGenes.featureplot <- FeaturePlot(experiment.aggregate, features = c('nFeature_RNA'), pt.size=0.5)
 
 nGenes.featureplot
+save_png_plot(plot = nGenes.featureplot, "nGenes_featplot.png")
 ```
 
 percent mitochondrial
@@ -178,6 +192,7 @@ percent mitochondrial
 pctmito.featureplot <- FeaturePlot(experiment.aggregate, features = c('percent.mito'), pt.size=0.5)
 
 pctmito.featureplot
+save_png_plot(plot = pctmito.featureplot, filename = "pctmito_featplot.png")
 ```
 
 
@@ -193,7 +208,7 @@ Seurat can help you find markers that define clusters via differential expressio
 
 ### FindAllMarkers can be used to automate the process across all genes.
 
-```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE}
+```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE, eval=TRUE}
 DefaultAssay(experiment.aggregate) <- "RNA"
 
 markers_all <- FindAllMarkers(
@@ -214,7 +229,7 @@ avg_diff appears to be the difference in log(x = mean(x = exp(x = x) - 1) + 1) b
 
 
 ### Feature plots and Violin Plots of Marker Genes
-```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, fig.width = 25, fig.height = 20}
+```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, eval=TRUE, fig.width = 25, fig.height = 20}
 feat_plots_top_genes <- function(cluster.num){  
   # cluster.num = 1
   
@@ -227,8 +242,10 @@ feat_plots_top_genes <- function(cluster.num){
   num.markers.to.plot <- 6
   # print(head(curr.markers))
 
-  feat.plot.path <- file.path(ggplot.directory, paste0("featurePlot_cluster_", cluster.num, ".png"))
-  vln.plot.path <- file.path(ggplot.directory, paste0("violinPlot_cluster_", cluster.num, ".png"))
+  feat.plot.path <- file.path(ggplot.directory, 
+                              paste0("part5", part5.suffix, "_marker_gene_featPlot_cl_", cluster.num, ".png"))
+  vln.plot.path <- file.path(ggplot.directory, 
+                             paste0("part5", part5.suffix, "_marker_gene_vlnPlot_cl_", cluster.num, ".png"))
 
   feat.plot.list <- FeaturePlot(
     experiment.aggregate,
@@ -292,6 +309,8 @@ heatmap.genes.by.cluster <- DoHeatmap(
 )
     
 heatmap.genes.by.cluster   
+
+save_png_plot(plot = heatmap.genes.by.cluster, file = "heatmap_genes_by_cluster.png")
 ```
 
 And last lets save all the objects in our session.
@@ -304,16 +323,9 @@ save.for.rdata <- c("experiment.aggregate",
                     "num.clusters.list")
 
 save(list=save.for.rdata, file=part5.rds.save.path)
+# load(part5.rds.save.path)
 
-to.save.for.report <- c("cellcycle.umap",
-                        "cluster.umap",
-                        "markers_all",
-                        "nGenes.featureplot",
-                        "nUMI.featureplot",
-                        "pctmito.featureplot",
-                        "sample.umap",
-                        "clusters.to.sample.table",
-                        "heatmap.genes.by.cluster",
+to.save.for.report <- c("clusters.to.sample.table",
                         "num.clusters.list")
 
 num.clusters <- length(unique(markers_all$cluster))
