@@ -24,7 +24,7 @@ if (!require(DoubletFinder)) {
                           dependencies = FALSE)
 }
 
-
+library(DoubletFinder)
 ```
 
 
