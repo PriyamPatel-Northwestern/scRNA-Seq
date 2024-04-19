@@ -242,45 +242,53 @@ DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.a
 ```{r tsne_group_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE}
 DimPlot(object = experiment.aggregate, group.by=grep("res",colnames(experiment.aggregate@meta.data),value = TRUE)[5:8], ncol=2 , pt.size=1.0, reduction = "tsne", label = T)
 ```
-```{r doublet_prediction}
+
+```{r doublet_prediction, warning=FALSE, error=FALSE, message=FALSE}
 
 # split the dataset into a list of seurat objects
 experiment.split <- SplitObject(experiment.aggregate, split.by = "orig.ident")
 
-# single.seurat.object <- experiment.split[[1]
-sweep.res.list <- paramSweep_v3(experiment.aggregate, 
-                                  PCs = 1:num.pcs, 
-                                  sct = run.sctransform) 
+single.seurat.object <- experiment.split[[1]]
+                                         
+experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.object) { 
+  sweep.res.list <- paramSweep(single.seurat.object,
+                                    PCs = 1:num.pcs)
   
-sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE) 
-bcmvn <- find.pK(sweep.stats) 
+  sweep.stats <- summarizeSweep(sweep.res.list, GT = FALSE)
+  bcmvn <- find.pK(sweep.stats)
   
-annotations <- experiment.aggregate@meta.data$integrated_snn_res.0.2
-homotypic.prop <- modelHomotypic(annotations)           
-nExp_poi <- round(0.075*nrow(experiment.aggregate@meta.data))  ## Assuming 7.5% doublet formation rate - tailor for your dataset 
-nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+  annotations <- single.seurat.object@meta.data$integrated_snn_res.0.1
+  homotypic.prop <- modelHomotypic(annotations)
+  nExp_poi <- round(0.075*nrow(single.seurat.object@meta.data))  ## Assuming 7.5% doublet formation rate - tailor for your dataset
+  nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+  
+  ## Run DoubletFinder with varying classification stringencies ----------------------------------------------------------------
+  single.seurat.object <- doubletFinder(experiment.aggregate,
+                                           PCs = 1:10,
+                                           pN = 0.25,
+                                           pK = 0.09,
+                                           nExp = nExp_poi,
+                                           reuse.pANN = FALSE)
 
-## Run DoubletFinder with varying classification stringencies ----------------------------------------------------------------
-experiment.aggregate <- doubletFinder_v3(experiment.aggregate,  
-                                         PCs = 1:10,  
-                                         pN = 0.25,  
-                                         pK = 0.09,  
-                                         nExp = nExp_poi,  
-                                         reuse.pANN = FALSE,  
-                                         sct = run.sctransform)
-  
-df.class.metadata.tag <- grep("DF.classifications", 
+  single.seurat.object
+})
+```
+
+```{r doublet_prediction_plot, warning=FALSE, error=FALSE, message=FALSE}
+
+df.class.metadata.tag <- grep("DF.classifications",
                               colnames(experiment.aggregate@meta.data),
                               value = TRUE)
 
-db.plot <- DimPlot(object = experiment.aggregate, 
+db.plot <- DimPlot(object = experiment.aggregate,
                    group.by=df.class.metadata.tag,
-                   pt.size=0.5, 
-                   reduction = "umap" )
-                                         
+                   pt.size=0.5,
+                   reduction = reduction.to.plot )
+
 db.plot
 save_png_plot(plot = db.plot, filename = "doublet_dimplot.png")
 ```
+
 
 And last lets save all the objects in our session.
 ```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}

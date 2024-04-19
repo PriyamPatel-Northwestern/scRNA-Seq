@@ -39,15 +39,15 @@ part4.suffix <- config.args$analysis$part4$part4_suffix
 part5.suffix <- config.args$analysis$part5$part5_suffix
 
 # Get paths for the files containing the info to make this report
-part3.file.for.report <- config.args$analysis$part3$part3_report_stuff_filename
+part3.file.for.report <- config.args$analysis$part3$part3_report_tables_filename
 part3.file.for.report <-sub(".RData", paste0(part3.suffix, ".RData"), part3.file.for.report)
 part3.file.report.path <-file.path(r.obj.loc, part3.file.for.report)
 
-part4.file.for.report <- config.args$analysis$part4$part4_report_stuff_filename
+part4.file.for.report <- config.args$analysis$part4$part4_report_tables_filename
 part4.file.for.report <-sub(".RData", paste0(part4.suffix, ".RData"), part4.file.for.report)
 part4.file.report.path <-file.path(r.obj.loc, part4.file.for.report)
 
-part5.file.for.report <- config.args$analysis$part5$part5_report_stuff_filename
+part5.file.for.report <- config.args$analysis$part5$part5_report_tables_filename
 part5.file.for.report <-sub(".RData", paste0(part5.suffix, ".RData"), part5.file.for.report)
 part5.file.report.path <-file.path(r.obj.loc, part5.file.for.report)
 
@@ -223,8 +223,8 @@ cell.cycle.table
 <br/>
 
 
-#### Table of doublet predictions
-```{r doublet_figure, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+<!-- #### Table of doublet predictions -->
+```{r doublet_figure, warning=FALSE, error=FALSE, message=FALSE, eval=FALSE, echo=FALSE}
 doublet.dimplot.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", "doublet_dimplot.png"))
 
 knitr::include_graphics(doublet.dimplot.path)

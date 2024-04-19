@@ -51,7 +51,7 @@ part5.rds.save.file <- config.args$analysis$part5$part5_rds_save_filename
 part5.rds.save.file <- sub(".RDS", paste0(part5.suffix, ".RDS"), part5.rds.save.file )
 part5.rds.save.path <- file.path(r.obj.loc, part5.rds.save.file)
 
-part5.file.for.report <- config.args$analysis$part5$part5_report_stuff_filename
+part5.file.for.report <- config.args$analysis$part5$part5_report_tables_filename
 part5.file.for.report <- sub(".RData", paste0(part5.suffix, ".RData"), part5.file.for.report )
 part5.file.report.path <- file.path(r.obj.loc, part5.file.for.report)
 
