@@ -42,7 +42,7 @@ part1.rds.save.file <- sub(".RDS", paste0(part1.suffix, ".RDS"), part1.rds.save.
 
 part1.rds.save.path <- file.path(r.obj.loc, part1.rds.save.file)
 
-part1.file.for.report <- config.args$analysis$part1$part1_report_stuff_filename
+part1.file.for.report <- config.args$analysis$part1$part1_report_tables_filename
 part1.file.for.report <-sub(".RData", paste0(part1.suffix, ".RData"), part1.file.for.report)
 
 part1.file.report.path <-file.path(r.obj.loc, part1.file.for.report)
@@ -569,7 +569,7 @@ convert_sparse_mat_to_mat <- function(mat){
 Violin plots showing expression of genes on the Y chromosome (male), along with 
 plot of expression of XIST (X-inactive specific transcript) (female). 
 
-```{r plot_y_and_xist}
+```{r plot_y_and_xist, eval = FALSE}
 Idents(experiment.aggregate) <- "orig.ident"
 
 if (!file.exists(genes.file)) {
@@ -630,7 +630,7 @@ rel.exp.bp.filename <- "part1_relative_expression_boxplot.png"
 rel.exp.bp.path <- file.path(ggplot.directory, rel.exp.bp.filename)
 
 par(mar = c(4, 8, 2, 1))
-C <- experiment.aggregate@assays$RNA@counts
+C <- experiment.aggregate[["RNA"]]$counts
 C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
 C_mat <- convert_sparse_mat_to_mat(C)
 # most_expressed <- order(apply(C, 1, median), decreasing = T)[20:1]

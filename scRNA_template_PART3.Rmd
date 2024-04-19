@@ -79,6 +79,9 @@ part3.rds.save.file <- config.args$analysis$part3$part3_rds_save_filename
 part3.rds.save.file <- sub(".RDS", paste0(part3.suffix, ".RDS"), part3.rds.save.file )
 part3.rds.save.path <- file.path(r.obj.loc, part3.rds.save.file)
 
+part3.report.file <- config.args$analysis$part3$part3_report_tables_filename
+part3.report.path <- file.path(r.obj.loc, part3.report.file)
+
 ggplot.directory.name <- config.args$analysis$part1$ggplot_dir
 ggplot.directory <- file.path(r.obj.loc, ggplot.directory.name)
 
@@ -100,7 +103,7 @@ save_png_plot <- function(plot, filename){
 
 * starting with rds object at `r part3.rds.open.path`
 * saving rds object to `r part3.rds.save.path`
-* saving file for report at `r part3.file.report.path`
+* saving file for report at `r part3.report.path`
 
 
 ```{r get_n.cores, echo = FALSE}
@@ -346,7 +349,7 @@ saveRDS(experiment.aggregate, file=part3.rds.save.path)
 
 # to.save.for.report <- c("cell.cycle.table")
 
-save(cell.cycle.table, file=part3.file.report.path)
+save(cell.cycle.table, file=part3.report.path)
 ```
 
 ## Session Information
