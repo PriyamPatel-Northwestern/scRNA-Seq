@@ -34,6 +34,7 @@ run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
 organism <- config.args$project$organism
+run.cell.cycle <- config.args$project$run_cell_cycle
 batch.correction.method <- config.args$analysis$part3$batch_correction
 
 ######################################################################
@@ -202,7 +203,7 @@ The list of genes comes with Seurat (only for human). We can use biomaRt to conv
 
 
 
-```{r cellcycle, warning=FALSE,error=FALSE}
+```{r cellcycle, warning=FALSE, error=FALSE, eval = run.cell.cycle}
 # DefaultAssay(experiment.aggregate) <- "RNA" # https://github.com/satijalab/seurat/issues/1717
 
 # Mouse Code
@@ -253,7 +254,7 @@ if (organism == "mouse"){
 
 #### Table of cell cycle (seurate)
 
-```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE}
+```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, eval = run.cell.cycle}
 cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
 
 cell.cycle.table
