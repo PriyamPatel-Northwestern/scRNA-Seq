@@ -9,7 +9,7 @@ params:
 # Part 3: PCA and choice in number of PCS
 
 ## Load libraries
-```{r load_libraries, warning=FALSE,error=FALSE,message=FALSE}
+```{r load_libraries, warning=FALSE, error=FALSE, message=FALSE}
 library(Seurat)
 library(ggplot2)
 library(kableExtra)
@@ -27,13 +27,20 @@ formatted.date <- format(todays.date, format="%B %d %Y")
 config.args <- read_yaml(params$config.args)
 ```
 
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r user_vals, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 r.obj.loc <- config.args$data$`rds-file-path`
 
 run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
 organism <- config.args$project$organism
+cell.cycle.string <- config.args$project$run_cell_cycle
+run_cell_cycle=TRUE
+
+if (cell.cycle.string == "FALSE"){
+  run_cell_cycle=FALSE
+} 
+
 batch.correction.method <- config.args$analysis$part3$batch_correction
 
 ######################################################################
@@ -119,7 +126,7 @@ if (node.type == "compute"){
 
 ## Load the Seurat object from part 2
 
-```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
+```{r load_data, warning=FALSE, error=FALSE, message=FALSE}
 experiment.aggregate <- readRDS(file=part3.rds.open.path)
 ```
 
@@ -128,7 +135,7 @@ experiment.aggregate <- readRDS(file=part3.rds.open.path)
 
 After filtering out cells from the dataset, the next step is to normalize the data. By default, we employ a global-scaling normalization method LogNormalize that normalizes the gene expression measurements for each cell by the total expression, multiplies this by a scale factor (10,000 by default), and then log-transforms the data.
 
-```{r normalize_help, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE}
+```{r normalize_help, warning=FALSE, error=FALSE, message=FALSE, eval=FALSE}
 ?NormalizeData
 ```
 
@@ -138,7 +145,7 @@ The function FindVariableFeatures identifies the most highly variable genes (def
 
 However, instead of using the variable genes function, lets instead assign variable genes to a set of "minimally expressed" genes.
 
-```{r normalize_find_var_genes, warning=FALSE,error=FALSE,message=FALSE}
+```{r normalize_find_var_genes, warning=FALSE, error=FALSE, message=FALSE}
 # split the dataset into a list of seurat objects
 experiment.split <- SplitObject(experiment.aggregate, split.by = "orig.ident")
 
@@ -171,7 +178,7 @@ experiment.split <- lapply(X = experiment.split, FUN = function(single.seurat.ob
 ```
 
 
-```{r sample_integration, warning=FALSE,error=FALSE,message=FALSE, eval = run.integrate.data, echo = run.integrate.data}
+```{r sample_integration, warning=FALSE, error=FALSE, message=FALSE, eval = run.integrate.data, echo = run.integrate.data}
 
 if (run.sctransform){
   print("running integration on sctransform samples")
@@ -202,7 +209,7 @@ The list of genes comes with Seurat (only for human). We can use biomaRt to conv
 
 
 
-```{r cellcycle, warning=FALSE,error=FALSE}
+```{r cellcycle, warning=FALSE, error=FALSE, eval = run_cell_cycle}
 # DefaultAssay(experiment.aggregate) <- "RNA" # https://github.com/satijalab/seurat/issues/1717
 
 # Mouse Code
@@ -253,7 +260,7 @@ if (organism == "mouse"){
 
 #### Table of cell cycle (seurate)
 
-```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE}
+```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, eval = run_cell_cycle}
 cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
 
 cell.cycle.table
@@ -261,7 +268,7 @@ cell.cycle.table
 
 #### Fixing the defualt "Ident" in Seurat
 
-```{r update_ident, warning=FALSE,error=FALSE,message=FALSE}
+```{r update_ident, warning=FALSE, error=FALSE, message=FALSE}
 table(Idents(experiment.aggregate))
 ## So lets change it back to samplename
 Idents(experiment.aggregate) <- "orig.ident"
@@ -274,7 +281,8 @@ table(Idents(experiment.aggregate))
 ScaleData - Scales and centers genes in the dataset. If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered unless otherwise specified. Here we regress out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
 
-```{r scale_data_cell_cycle, warning=FALSE,error=FALSE,message=FALSE}
+```{r scale_data_cell_cycle, warning=FALSE, error=FALSE, message=FALSE, eval=run_cell_cycle}
+
 
 experiment.aggregate <- ScaleData(experiment.aggregate, 
                                   vars.to.regress = cell.cycle.vars,
@@ -286,18 +294,18 @@ experiment.aggregate <- ScaleData(experiment.aggregate,
 
 Next we perform PCA (principal components analysis) on the scaled data.  
 
-```{r pca_help, warning=FALSE,error=FALSE,message=FALSE, eval=FALSE, echo = FALSE}
+```{r pca_help, warning=FALSE, error=FALSE, message=FALSE, eval=FALSE, echo = FALSE}
 ?RunPCA
 ```
 
-```{r pca, warning=FALSE,error=FALSE,message=FALSE}
+```{r pca, warning=FALSE, error=FALSE, message=FALSE}
 experiment.aggregate <- RunPCA(object = experiment.aggregate, npcs=100)
 ```
 
 Seurat then provides a number of ways to visualize the PCA results
 
 Visualize PCA loadings
-```{r viz_pca, warning=FALSE,error=FALSE,message=FALSE}
+```{r viz_pca, warning=FALSE, error=FALSE, message=FALSE}
 pca.loadings.1 <- VizDimLoadings(experiment.aggregate, dims = 1, ncol = 1) + theme_minimal(base_size = 8)
 pca.loadings.2 <- VizDimLoadings(experiment.aggregate, dims = 2, ncol = 1) + theme_minimal(base_size = 8)
 
@@ -309,7 +317,7 @@ save_png_plot(plot = pca.loadings.2, filename = "pca_loadings_2.png")
 ```
 
 Principal components plot
-```{r plot_pca, warning=FALSE,error=FALSE,message=FALSE}
+```{r plot_pca, warning=FALSE, error=FALSE, message=FALSE}
 pca.plot <- DimPlot(object = experiment.aggregate, reduction = "pca")
 
 pca.plot
@@ -319,7 +327,7 @@ save_png_plot(plot = pca.plot, filename = "pca_dimplot.png")
 
 Draws a heatmap focusing on a principal component. Both cells and genes are sorted by their principal component scores. Allows for nice visualization of sources of heterogeneity in the dataset.
 
-```{r heatmap_pca, warning=FALSE,error=FALSE,message=FALSE}
+```{r heatmap_pca, warning=FALSE, error=FALSE, message=FALSE}
 pca.heatmap.1 <- DimHeatmap(object = experiment.aggregate, dims = 1:6, cells = 500, balanced = TRUE, fast = FALSE)
 
 pca.heatmap.2 <- DimHeatmap(object = experiment.aggregate, dims = 7:12, cells = 500, balanced = TRUE, fast = FALSE)
@@ -336,7 +344,7 @@ To overcome the extensive technical noise in any single gene, Seurat clusters ce
 
 ElbowPlot plots the standard deviations (or approximate singular values if running PCAFast) of the principle components for easy identification of an elbow in the graph. This elbow often corresponds well with the significant PCs and is much faster to run.  This is the traditional approach to selecting principal components.
 
-```{r elbow, warning=FALSE,error=FALSE,message=FALSE}
+```{r elbow, warning=FALSE, error=FALSE, message=FALSE}
 elbow.plot <- ElbowPlot(experiment.aggregate, ndims = 100)
 
 elbow.plot
@@ -344,7 +352,7 @@ elbow.plot
 save_png_plot(plot = elbow.plot, filename = "elbow_plot.png")
 ```
 ## Finally, lets save the filtered and normalized data
-```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
+```{r save_rdata, warning=FALSE, error=FALSE, message=FALSE}
 saveRDS(experiment.aggregate, file=part3.rds.save.path)
 
 # to.save.for.report <- c("cell.cycle.table")
@@ -353,6 +361,6 @@ save(cell.cycle.table, file=part3.report.path)
 ```
 
 ## Session Information
-```{r session_info, warning=FALSE,error=FALSE,message=FALSE}
+```{r session_info, warning=FALSE, error=FALSE, message=FALSE}
 sessionInfo()
 ```

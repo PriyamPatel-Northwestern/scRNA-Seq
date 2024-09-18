@@ -7,7 +7,7 @@ params:
 ---
 
 
-```{r load_packages_and_rdata, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r load_packages_and_rdata, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 library(Seurat)
 library(kableExtra)
 library(ggplot2)
@@ -28,6 +28,14 @@ config.args <- read_yaml(params$config.args)
 
 # Info for printing in the report
 project.description <- config.args$project$`project-decription`
+cell.cycle.string <- config.args$project$run_cell_cycle
+run_cell_cycle=TRUE
+
+if (cell.cycle.string == "FALSE"){
+  run_cell_cycle=FALSE
+} 
+
+
 num.pcs <- config.args$analysis$part4$num_pcs
 
 # set project variables
@@ -85,7 +93,7 @@ After the filtering in part 1, there are a few more steps before clustering.
 
 First the data are log normalized, and then scaled.
 
-ScaleData - Scales and centers genes in the dataset. I've regressed out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
+ScaleData - Scales and centers genes in the dataset. I've regressed out cell cycle results S.Score and G2M.Score (if mouse or human), percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
 ## PCA
 
@@ -94,7 +102,7 @@ PCA is used for dimensionality reduction. The objective here is to try and isola
 In order to pick the proper number of PCs to use we can look at a number of different figures, but I'll only show the elbow plot here. Seurat's ElbowPlot function plots the standard deviations of the principle components for easy identification of an elbow in the graph. This elbow often corresponds well with the significant PCs and is much faster to run.  This is the traditional approach to selecting principal components.
 
 
-```{r load_pre-pca_obj, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+```{r load_pre-pca_obj, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 elbow.plot.path <- file.path(ggplot.directory, paste0("part3", part3.suffix, "_", "elbow_plot.png"))
 
 knitr::include_graphics(elbow.plot.path)
@@ -112,7 +120,7 @@ Clustering analysis allows for using different 'resolutions'. The resolution set
 <!-- todo: fill out the range data below with the numbers you used, if you did clustering with a range of resolutions -->
 Here is a table showing the number of clusters resulting from different resolution values, ranging from 0.25 to 3.75, incremented by 0.5:
 <br/>
-```{r resolution_clust_num_table, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r resolution_clust_num_table, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 clusters.by.resolution.table
 
 # sapply(grep("res",colnames(experiment.aggregate@meta.data),value = TRUE),
@@ -127,7 +135,7 @@ And here are the clustering results looking at the 4 lowest resolutions (0.25, 0
 
 <br/>
 
-```{r resolution_clust_num_plots, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 12}
+```{r resolution_clust_num_plots, warning=FALSE, error=FALSE, message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 12}
 
 umap.dimplot1.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", "umap_dimplot1.png"))
 
@@ -140,7 +148,7 @@ And here are the clustering results looking at the 4 highest resolutions (2.25, 
 
 <br/>
 
-```{r resolution_clust_num_plots_2, warning=FALSE,error=FALSE,message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 12}
+```{r resolution_clust_num_plots_2, warning=FALSE, error=FALSE, message=FALSE,  echo=FALSE, fig.height = 12, fig.width = 12}
 
 umap.dimplot2.path <- file.path(ggplot.directory, paste0("part4", part4.suffix, "_", "umap_dimplot2.png"))
 
@@ -156,7 +164,7 @@ All of the plots below are based on a resolution of `r resolution.selection`
 <br/>
 
 ### Plot UMAP coloring by the slot 'ident' (i.e. cluster number, default).
-```{r plot_umap, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r plot_umap, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 cluster.umap.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "cluster_umap.png"))
 
 knitr::include_graphics(cluster.umap.path)
@@ -165,7 +173,7 @@ knitr::include_graphics(cluster.umap.path)
 <br/>
 
 ### Plot UMAP coloring by the slot 'orig.ident' (sample names)
-```{r plot_orig_ident, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r plot_orig_ident, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 sample.umap.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "sample_umap.png"))
 
 knitr::include_graphics(sample.umap.path)
@@ -175,7 +183,7 @@ knitr::include_graphics(sample.umap.path)
 <br/>
 
 
-```{r cells_in_clusters_by_sample_table, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r cells_in_clusters_by_sample_table, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 # table(Idents(experiment.aggregate),experiment.aggregate$orig.ident) %>% kable(caption = "Number of Cells in each cluster, by sample", jalign = "c") %>% kable_styling()
 
 clusters.to.sample.table
@@ -185,7 +193,7 @@ clusters.to.sample.table
 <br/>
 
 ### Number of UMIs (i.e. how many unique rna molecules are in each cell):
-```{r plot_rna, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r plot_rna, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 
 nUMI.featplot.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "nUMI_featplot.png"))
 
@@ -196,7 +204,7 @@ knitr::include_graphics(nUMI.featplot.path)
 <br/>
 
 ### Number of genes present (i.e. how many different genes are represented by the UMIs):
-```{r plot_feature, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r plot_feature, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 nGenes.featplot.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "nGenes_featplot.png"))
 
 knitr::include_graphics(nGenes.featplot.path)
@@ -206,7 +214,7 @@ knitr::include_graphics(nGenes.featplot.path)
 <br/>
 
 ### Percent mitochondrial
-```{r plot_mito, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+```{r plot_mito, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE}
 pctmito.featplot.path <- file.path(ggplot.directory, paste0("part5", part5.suffix, "_", "pctmito_featplot.png"))
 
 knitr::include_graphics(pctmito.featplot.path)
@@ -214,8 +222,10 @@ knitr::include_graphics(pctmito.featplot.path)
 <br/>
 <br/>
 
-#### Table of cell cycle 
-```{r cellcycle_table, warning=FALSE,error=FALSE,message=FALSE, echo=FALSE}
+#### Table of cell cycle  
+Only if mouse or human
+
+```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE, eval=run_cell_cycle}
 cell.cycle.table
 # table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
 ```
@@ -237,7 +247,7 @@ knitr::include_graphics(doublet.dimplot.path)
 
 For each cluster, which genes are differentially expressed in that 
 cluster compared to all other clusters combined?
-```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE, fig.width = 25, fig.height = 20}
+```{r gene_feature, warning=FALSE, error=FALSE, message=FALSE, echo = FALSE, fig.width = 25, fig.height = 20}
 figure.list <- list()
 
 # Note that knitr::include_graphics doesn't work in a loop. Instead, I'll make a list of lists of filenames

@@ -8,12 +8,12 @@ params:
 
 # Part 5: Marker genes
 
-```{r setup_opt, warning=FALSE,error=FALSE,message=FALSE, echo = F, eval=F}
+```{r setup_opt, warning=FALSE, error=FALSE, message=FALSE, echo = F, eval=F}
 options(width = 450)
 ```
 
 ## Load libraries
-```{r load_libraries, warning=FALSE,error=FALSE,message=FALSE}
+```{r load_libraries, warning=FALSE, error=FALSE, message=FALSE}
 library(Seurat)
 library(ggplot2)
 library(dplyr)
@@ -32,12 +32,18 @@ config.args <- read_yaml(params$config.args)
 ```
 
 
-```{r user_vals, warning=FALSE,error=FALSE,message=FALSE, echo = FALSE}
+```{r user_vals, warning=FALSE, error=FALSE, message=FALSE, echo = FALSE}
 r.obj.loc <- config.args$data$`rds-file-path`
 
 resolution.selection <- config.args$analysis$part5$resolution_selection
 
 run_tests <- config.args$analysis$run_tests
+cell.cycle.string <- config.args$project$run_cell_cycle
+run_cell_cycle=TRUE
+
+if (cell.cycle.string == "FALSE"){
+  run_cell_cycle=FALSE
+} 
 node.type <- config.args$analysis$node_type
 
 part4.suffix <- config.args$analysis$part4$part4_suffix
@@ -115,7 +121,7 @@ if (node.type == "compute"){
 
 ## Load the Seurat object from part 4
 
-```{r load_data, warning=FALSE,error=FALSE,message=FALSE}
+```{r load_data, warning=FALSE, error=FALSE, message=FALSE}
 experiment.aggregate <- readRDS(file=part5.rds.open.path)
 Idents(experiment.aggregate) <- resolution.selection
 ```
@@ -124,7 +130,7 @@ Idents(experiment.aggregate) <- resolution.selection
 ### Choosing a resolution
 
 Table of cluster to sample assignments.
-```{r cells_per_res_sample, warning=FALSE,error=FALSE,message=FALSE}
+```{r cells_per_res_sample, warning=FALSE, error=FALSE, message=FALSE}
 clusters.to.sample.table <- table(Idents(experiment.aggregate),experiment.aggregate$orig.ident) %>% kable(caption = "Number of Cells in each cluster, by sample", jalign = "c") %>% kable_styling()
 # table(Idents(experiment.aggregate),experiment.aggregate$orig.ident)
 # clusters.to.sample.table <- sapply(grep("res",colnames(experiment.aggregate@meta.data),value = TRUE),
@@ -134,13 +140,13 @@ clusters.to.sample.table
 ```
 
 <!-- Plot TSNE coloring by the slot 'ident' (default). -->
-<!-- ```{r plot_tsne, warning=FALSE,error=FALSE,message=FALSE} -->
+<!-- ```{r plot_tsne, warning=FALSE, error=FALSE, message=FALSE} -->
 <!-- DimPlot(object = experiment.aggregate, pt.size=0.5, reduction = "tsne", label = T) -->
 <!-- ``` -->
 
 
 ### Plot uMap coloring by the slot 'ident' (default).
-```{r plot_umap, warning=FALSE,error=FALSE,message=FALSE}
+```{r plot_umap, warning=FALSE, error=FALSE, message=FALSE}
 cluster.umap <- DimPlot(object = experiment.aggregate, 
                         pt.size=0.5, 
                         reduction = "umap", 
@@ -152,7 +158,7 @@ save_png_plot(plot = cluster.umap, filename = "cluster_umap.png")
 ```
 
 ### Plot UMAP  coloring by the slot 'orig.ident' (sample names) with alpha colors turned on. A pretty picture
-```{r pretty_pre, warning=FALSE,error=FALSE,message=FALSE}
+```{r pretty_pre, warning=FALSE, error=FALSE, message=FALSE}
 sample.umap <- DimPlot(object = experiment.aggregate, group.by="orig.ident", pt.size=0.5, reduction = "umap" )
 
 sample.umap
@@ -162,7 +168,7 @@ save_png_plot(plot = sample.umap, filename = "sample_umap.png")
 
 
 ### uMAP plot by cell cycle
-```{r plot_cellcycle, warning=FALSE,error=FALSE,message=FALSE}
+```{r plot_cellcycle, warning=FALSE, error=FALSE, message=FALSE, eval=run_cell_cycle}
 cellcycle.umap <- DimPlot(object = experiment.aggregate, pt.size=0.5, group.by = "Phase", reduction = "umap" )
 
 cellcycle.umap
@@ -173,14 +179,14 @@ save_png_plot(plot = cellcycle.umap, filename = "cellcycle_umap.png")
 ### Use feature plot to plot our read valued metadata, like nUMI, Feature count, and percent Mito
 
 FeaturePlot can be used to color cells with a 'feature', non categorical data, like number of UMIs
-```{r plot_rna, warning=FALSE,error=FALSE,message=FALSE}
+```{r plot_rna, warning=FALSE, error=FALSE, message=FALSE}
 nUMI.featureplot <- FeaturePlot(experiment.aggregate, features = c('nCount_RNA'), pt.size=0.5)
 
 nUMI.featureplot
 save_png_plot(plot = nUMI.featureplot, filename = "nUMI_featplot.png")
 ```
 and number of genes present
-```{r plot_feature, warning=FALSE,error=FALSE,message=FALSE}
+```{r plot_feature, warning=FALSE, error=FALSE, message=FALSE}
 nGenes.featureplot <- FeaturePlot(experiment.aggregate, features = c('nFeature_RNA'), pt.size=0.5)
 
 nGenes.featureplot
@@ -188,7 +194,7 @@ save_png_plot(plot = nGenes.featureplot, "nGenes_featplot.png")
 ```
 
 percent mitochondrial
-```{r plot_mito, warning=FALSE,error=FALSE,message=FALSE}
+```{r plot_mito, warning=FALSE, error=FALSE, message=FALSE}
 pctmito.featureplot <- FeaturePlot(experiment.aggregate, features = c('percent.mito'), pt.size=0.5)
 
 pctmito.featureplot
@@ -208,7 +214,7 @@ Seurat can help you find markers that define clusters via differential expressio
 
 ### FindAllMarkers can be used to automate the process across all genes.
 
-```{r find_all_markers, warning=FALSE,error=FALSE,message=FALSE, eval=TRUE}
+```{r find_all_markers, warning=FALSE, error=FALSE, message=FALSE, eval=TRUE}
 DefaultAssay(experiment.aggregate) <- "RNA"
 
 markers_all <- FindAllMarkers(
@@ -229,7 +235,7 @@ avg_diff appears to be the difference in log(x = mean(x = exp(x = x) - 1) + 1) b
 
 
 ### Feature plots and Violin Plots of Marker Genes
-```{r gene_feature, warning=FALSE,error=FALSE,message=FALSE, eval=TRUE, fig.width = 25, fig.height = 20}
+```{r gene_feature, warning=FALSE, error=FALSE, message=FALSE, eval=TRUE, fig.width = 25, fig.height = 20}
 feat_plots_top_genes <- function(cluster.num){  
   # cluster.num = 1
   
@@ -300,7 +306,7 @@ sapply(num.clusters.list, feat_plots_top_genes)
 <br/>
 
 Plot a heatmap of genes by cluster for the top 10 marker genes per cluster
-```{r markers_head, warning=FALSE,error=FALSE,message=FALSE, fig.height=10}
+```{r markers_head, warning=FALSE, error=FALSE, message=FALSE, fig.height=10}
 DefaultAssay(experiment.aggregate) <- "SCT"
 top10 <- markers_all_single %>% group_by(cluster) %>% top_n(10, avg_log2FC)
 heatmap.genes.by.cluster <- DoHeatmap(
@@ -314,7 +320,7 @@ save_png_plot(plot = heatmap.genes.by.cluster, file = "heatmap_genes_by_cluster.
 ```
 
 And last lets save all the objects in our session.
-```{r save_rdata, warning=FALSE,error=FALSE,message=FALSE}
+```{r save_rdata, warning=FALSE, error=FALSE, message=FALSE}
 
 save.for.rdata <- c("experiment.aggregate",
                     "markers_all",
@@ -341,6 +347,6 @@ save(list = to.save.for.report, file = part5.file.report.path)
 ```
 
 ## Session Information
-```{r session_info, warning=FALSE,error=FALSE,message=FALSE}
+```{r session_info, warning=FALSE, error=FALSE, message=FALSE}
 sessionInfo()
 ```

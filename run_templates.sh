@@ -7,8 +7,8 @@
 #SBATCH -o "%x.o%j"
 #SBATCH -N 1                 ## number of nodes
 #SBATCH -n 1                 ## number of cores
-#SBATCH -t 48:00:00          ## walltime
-#SBATCH --mem=80G
+#SBATCH -t 4:00:00          ## walltime
+#SBATCH --mem=10G
 
 export MC_CORES=${SLURM_NTASKS}
 
