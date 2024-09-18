@@ -4,6 +4,7 @@ project:
         project-name: "project name" # Also fill this out in 'common.yaml'
         project-decription: "long string here"
         organism: "human or mouse"
+        run_cell_cycle: "T" # Cell cycle predictions can't run if you aren't using human or mouse, so you can turn it off here.
         samples:
                 -"sample1"
                 -"sample2"
