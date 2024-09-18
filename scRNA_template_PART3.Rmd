@@ -34,7 +34,13 @@ run_tests <- config.args$analysis$run_tests
 node.type <- config.args$analysis$node_type
 
 organism <- config.args$project$organism
-run.cell.cycle <- config.args$project$run_cell_cycle
+cell.cycle.string <- config.args$project$run_cell_cycle
+run_cell_cycle=TRUE
+
+if (cell.cycle.string == "FALSE"){
+  run_cell_cycle=FALSE
+} 
+
 batch.correction.method <- config.args$analysis$part3$batch_correction
 
 ######################################################################
@@ -203,7 +209,7 @@ The list of genes comes with Seurat (only for human). We can use biomaRt to conv
 
 
 
-```{r cellcycle, warning=FALSE, error=FALSE, eval = run.cell.cycle}
+```{r cellcycle, warning=FALSE, error=FALSE, eval = run_cell_cycle}
 # DefaultAssay(experiment.aggregate) <- "RNA" # https://github.com/satijalab/seurat/issues/1717
 
 # Mouse Code
@@ -254,7 +260,7 @@ if (organism == "mouse"){
 
 #### Table of cell cycle (seurate)
 
-```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, eval = run.cell.cycle}
+```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, eval = run_cell_cycle}
 cell.cycle.table <- table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
 
 cell.cycle.table
@@ -275,7 +281,7 @@ table(Idents(experiment.aggregate))
 ScaleData - Scales and centers genes in the dataset. If variables are provided in vars.to.regress, they are individually regressed against each gene, and the resulting residuals are then scaled and centered unless otherwise specified. Here we regress out cell cycle results S.Score and G2M.Score, percentage mitochondria (percent.mito) and the number of features (nFeature_RNA).
 
 
-```{r scale_data_cell_cycle, warning=FALSE, error=FALSE, message=FALSE, eval=run.cell.cycle}
+```{r scale_data_cell_cycle, warning=FALSE, error=FALSE, message=FALSE, eval=run_cell_cycle}
 
 
 experiment.aggregate <- ScaleData(experiment.aggregate, 

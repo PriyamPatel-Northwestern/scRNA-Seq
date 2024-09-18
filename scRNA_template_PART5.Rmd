@@ -38,7 +38,12 @@ r.obj.loc <- config.args$data$`rds-file-path`
 resolution.selection <- config.args$analysis$part5$resolution_selection
 
 run_tests <- config.args$analysis$run_tests
-run.cell.cycle <- config.args$project$run_cell_cycle
+cell.cycle.string <- config.args$project$run_cell_cycle
+run_cell_cycle=TRUE
+
+if (cell.cycle.string == "FALSE"){
+  run_cell_cycle=FALSE
+} 
 node.type <- config.args$analysis$node_type
 
 part4.suffix <- config.args$analysis$part4$part4_suffix
@@ -163,7 +168,7 @@ save_png_plot(plot = sample.umap, filename = "sample_umap.png")
 
 
 ### uMAP plot by cell cycle
-```{r plot_cellcycle, warning=FALSE, error=FALSE, message=FALSE, eval=run.cell.cycle}
+```{r plot_cellcycle, warning=FALSE, error=FALSE, message=FALSE, eval=run_cell_cycle}
 cellcycle.umap <- DimPlot(object = experiment.aggregate, pt.size=0.5, group.by = "Phase", reduction = "umap" )
 
 cellcycle.umap

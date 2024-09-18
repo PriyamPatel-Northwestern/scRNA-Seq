@@ -28,7 +28,14 @@ config.args <- read_yaml(params$config.args)
 
 # Info for printing in the report
 project.description <- config.args$project$`project-decription`
-run.cell.cycle <- config.args$project$run_cell_cycle
+cell.cycle.string <- config.args$project$run_cell_cycle
+run_cell_cycle=TRUE
+
+if (cell.cycle.string == "FALSE"){
+  run_cell_cycle=FALSE
+} 
+
+
 num.pcs <- config.args$analysis$part4$num_pcs
 
 # set project variables
@@ -218,7 +225,7 @@ knitr::include_graphics(pctmito.featplot.path)
 #### Table of cell cycle  
 Only if mouse or human
 
-```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE, eval=run.cell.cycle}
+```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE, eval=run_cell_cycle}
 cell.cycle.table
 # table(experiment.aggregate@meta.data$Phase) %>% kable(caption = "Number of Cells in each Cell Cycle Stage", col.names = c("Stage", "Count"), align = "c") %>% kable_styling()
 ```
