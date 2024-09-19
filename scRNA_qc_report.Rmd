@@ -32,6 +32,13 @@ project.description <- config.args$project$`project-decription`
 dataset.path <- config.args$data$parent_directory_path
 r.obj.loc <- config.args$data$`rds-file-path` # Output folder
 
+metrics.table.string <- config.args$analysis$part1$generate_metrics_tables
+run_metrics_tables=TRUE
+
+if (metrics.table.string == "FALSE"){
+  run_metrics_tables=FALSE
+}
+
 part1.suffix <- config.args$analysis$part1$part1_suffix
 part2.suffix <- config.args$analysis$part2$part2_suffix
 
@@ -119,22 +126,22 @@ Here is a table showing the raw sequencing metrics for all samples.
 
 
 
-```{r sequencing_characteristics, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+```{r sequencing_characteristics, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE, eval=run_metrics_tables}
 
 sequencing.char.table
 ```
 
-```{r mapping_characteristics_1, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+```{r mapping_characteristics_1, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE, eval=run_metrics_tables}
 
 mapping.char.table.1
 ```
 
-```{r mapping_characteristics_2, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+```{r mapping_characteristics_2, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE, eval=run_metrics_tables}
 
 mapping.char.table.2
 ```
 
-```{r cell_characteristics, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE}
+```{r cell_characteristics, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE, eval=run_metrics_tables}
 
 cell.char.table
 ```
