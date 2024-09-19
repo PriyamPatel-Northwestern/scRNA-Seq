@@ -167,7 +167,7 @@ save_png_plot(plot = sample.umap, filename = "sample_umap.png")
 
 
 
-### uMAP plot by cell cycle
+`r if (run_cell_cycle) {"### uMAP plot by cell cycle"}`
 ```{r plot_cellcycle, warning=FALSE, error=FALSE, message=FALSE, eval=run_cell_cycle}
 cellcycle.umap <- DimPlot(object = experiment.aggregate, pt.size=0.5, group.by = "Phase", reduction = "umap" )
 

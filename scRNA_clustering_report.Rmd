@@ -222,8 +222,7 @@ knitr::include_graphics(pctmito.featplot.path)
 <br/>
 <br/>
 
-#### Table of cell cycle  
-Only if mouse or human
+`r if (run_cell_cycle) {"#### Table of cell cycle"}`
 
 ```{r cellcycle_table, warning=FALSE, error=FALSE, message=FALSE, echo=FALSE, eval=run_cell_cycle}
 cell.cycle.table

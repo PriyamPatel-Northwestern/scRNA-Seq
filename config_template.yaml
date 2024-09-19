@@ -4,7 +4,7 @@ project:
         project-name: "project name" # Also fill this out in 'common.yaml'
         project-decription: "long string here"
         organism: "human or mouse"
-        run_cell_cycle: "T" # Cell cycle predictions can't run if you aren't using human or mouse, so you can turn it off here.
+        run_cell_cycle: "TRUE" # Cell cycle predictions can't run if you aren't using human or mouse, so you can turn it off here.
         samples:
                 -"sample1"
                 -"sample2"
@@ -24,6 +24,7 @@ analysis:
                 part1_rds_save_filename: "original_seurat_object.RDS"
                 part1_report_tables_filename: "part1_tables_for_report.RData" 
                 part1_suffix: ""
+                generate_metrics_tables: "TRUE"
                 ggplot_dir: "ggplot"
         part2: 
                 part2_rds_open_filename: "original_seurat_object.RDS"
@@ -51,7 +52,7 @@ analysis:
                 part4_suffix: ""
         part5:
                 part5_rds_open_filename: "clusters_seurat_object.RDS"
-                resolution_selection: "RNA_snn_res.0.25"
+                resolution_selection: "integrated_snn_res.0.2"
                 part5_report_tables_filename: "part5_tables_for_report.RData"
                 part5_rds_save_filename: "clustered_seurat_object_and_markers.RDS"
                 marker_gene_dir: "marker_genes"

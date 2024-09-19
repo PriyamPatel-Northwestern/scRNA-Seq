@@ -201,11 +201,10 @@ if (run.sctransform){
 ```
 
 
-### Calculate Cell-Cycle with Seurat
-[Dissecting the multicellular ecosystem of metastatic melanoma by single-cell RNA-seq](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4944528/)
+`r if (run_cell_cycle) {"### Calculate Cell-Cycle with Seurat"}`
+`r if (run_cell_cycle) {"[Dissecting the multicellular ecosystem of metastatic melanoma by single-cell RNA-seq](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4944528/)"}`
 
-The list of genes comes with Seurat (only for human). We can use biomaRt to convert the human gene symbols to mouse.
-
+`r if (run_cell_cycle) {"The list of genes comes with Seurat (only for human). We can use biomaRt to convert the human gene symbols to mouse."}`
 
 
 
