@@ -161,7 +161,7 @@ Part 1 focuses on getting data into R and setting up our initial object.
 <br/>
 <br/>
 
-## Read in the cellranger sample metrics csv files
+`r if (run_metrics_tables) {"## Read in the cellranger sample metrics csv files"}`
 
 <br/>
 <br/>
@@ -228,7 +228,7 @@ cell.characteristics <- sequencing_metrics[,14:19]
 
 <br/>
 
-## Sequencing Characteristics
+`r if (run_metrics_tables) {"## Sequencing Characteristics"}`
 ```{r table_seq_characteristics, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 
 # scale the columns with percentages from 0:100
@@ -261,7 +261,7 @@ sequencing.char.table
 
 <br/>
 
-## Mapping Characteristics
+`r if (run_metrics_tables) {"## Mapping Characteristics"}`
 ```{r table_map_characteristics, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
@@ -302,7 +302,7 @@ mapping.char.table.2
 ```
 <br/>
 
-## Cell Characteristics
+`r if (run_metrics_tables) {"## Cell Characteristics"}`
 ```{r table_cell_characteristics, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 
 # scale the columns with percentages from 0:100

@@ -116,14 +116,11 @@ get_png_plot_path <- function(filename){
 <br/>
 <br/>
 
+`r if (run_metrics_tables) {"### Raw data metrics"}`
+<!-- ### Raw data metrics -->
 
-### Raw data metrics
-
-Here is a table showing the raw sequencing metrics for all samples.
-<!-- todo: fill out any observations you have about the sequencing metrics -->
-<!-- EXAMPLE ONLY: Of note, the [sequencing saturation](https://kb.10xgenomics.com/hc/en-us/articles/115005062366-What-is-sequencing-saturation-) for this experiment looks a bit low. This means that there seems to be a lot of RNA in these samples and more sequencing could possibly identify more genes being expressed. -->
+`r if (run_metrics_tables) {"Here is a table showing the raw sequencing metrics for all samples."}`
 <br/>
-
 
 
 ```{r sequencing_characteristics, warning=FALSE,error=FALSE, message=FALSE, echo=FALSE, eval=run_metrics_tables}
