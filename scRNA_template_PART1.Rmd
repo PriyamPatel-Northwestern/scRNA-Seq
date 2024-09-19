@@ -22,6 +22,13 @@ suppressMessages(require(yaml))
 todays.date <- Sys.Date()
 formatted.date <- format(todays.date, format="%B %d %Y")
 
+metrics.table.string <- config.args$analysis$part1$generate_metrics_tables
+run_metrics_tables=TRUE
+
+if (metrics.table.string == "FALSE"){
+  run_metrics_tables=FALSE
+}
+
 # Import the config file
 config.args <- read_yaml(params$config.args)
 
@@ -159,7 +166,7 @@ Part 1 focuses on getting data into R and setting up our initial object.
 <br/>
 <br/>
 
-```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE}
+```{r read_metrics, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 d10x.metrics <- lapply(ids, function(sample.name){
   print(sample.name)
   metrics.path.cleaned <- file.path(dataset.path,sample.name,"metrics_summary.csv")
@@ -222,7 +229,7 @@ cell.characteristics <- sequencing_metrics[,14:19]
 <br/>
 
 ## Sequencing Characteristics
-```{r table_seq_characteristics, warning=FALSE,error=FALSE, message=FALSE}
+```{r table_seq_characteristics, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
@@ -255,7 +262,7 @@ sequencing.char.table
 <br/>
 
 ## Mapping Characteristics
-```{r table_map_characteristics, warning=FALSE,error=FALSE, message=FALSE}
+```{r table_map_characteristics, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
 mapping.char.table.1 <- mapping.characteristics[, c(1:4)] %>%
@@ -277,7 +284,7 @@ mapping.char.table.1
 
  <br/>
  
-```{r table_map_characteristics_2, warning=FALSE,error=FALSE, message=FALSE}
+```{r table_map_characteristics_2, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
@@ -296,7 +303,7 @@ mapping.char.table.2
 <br/>
 
 ## Cell Characteristics
-```{r table_cell_characteristics, warning=FALSE,error=FALSE, message=FALSE}
+```{r table_cell_characteristics, warning=FALSE,error=FALSE, message=FALSE, eval=run_metrics_tables}
 
 # scale the columns with percentages from 0:100
 # direction = -1 will make it so that the text and background don't blend in, unless the percentages are close to 50%
