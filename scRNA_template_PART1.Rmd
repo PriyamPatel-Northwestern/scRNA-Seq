@@ -22,7 +22,6 @@ suppressMessages(require(yaml))
 todays.date <- Sys.Date()
 formatted.date <- format(todays.date, format="%B %d %Y")
 
-metrics.table.string <- config.args$analysis$part1$generate_metrics_tables
 run_metrics_tables=TRUE
 
 if (metrics.table.string == "FALSE"){
@@ -32,6 +31,7 @@ if (metrics.table.string == "FALSE"){
 # Import the config file
 config.args <- read_yaml(params$config.args)
 
+metrics.table.string <- config.args$analysis$part1$generate_metrics_tables
 # set project variables
 analyst.name <- config.args$project$`analyst-name`
 formatted.samples <- config.args$project$samples
