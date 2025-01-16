@@ -21,17 +21,18 @@ suppressMessages(require(yaml))
 # get the datetime and set it to variable for inline printing
 todays.date <- Sys.Date()
 formatted.date <- format(todays.date, format="%B %d %Y")
+
+# Import the config file
 config.args <- read_yaml(params$config.args)
 
 run_metrics_tables=TRUE
+metrics.table.string <- config.args$analysis$part1$generate_metrics_tables
 
 if (metrics.table.string == "FALSE"){
   run_metrics_tables=FALSE
 }
 
-# Import the config file
 
-metrics.table.string <- config.args$analysis$part1$generate_metrics_tables
 # set project variables
 analyst.name <- config.args$project$`analyst-name`
 formatted.samples <- config.args$project$samples
